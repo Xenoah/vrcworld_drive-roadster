@@ -19,7 +19,7 @@
 
 ## 結果
 
-Unity C# と UdonSharp のコンパイル、シーン構築、ClientSim スモーク試験 **19/19 項目成功**。検査項目は次のとおりです。
+Unity C# と UdonSharp のコンパイル、シーン構築、ClientSim スモーク試験 **39/39 項目成功**。検査項目は次のとおりです。
 
 | 検査 | 結果・意味 |
 |---|---|
@@ -37,7 +37,7 @@ Unity C# と UdonSharp のコンパイル、シーン構築、ClientSim スモ�
 | 飛行 | LAUNCH 手前へ配置し、自由走行のゲート面通過から `flightAllowed=true` と mode 3 を確認 |
 | 失格 | 計測中に 25 m の位置不連続を与え、discontinuity として無効化 |
 | 降車 | Station 退出後、着座 false / driver −1 |
-| キャプチャ 4 件 | それぞれ PNG が生成され、ファイルサイズと目視で内容を確認 |
+| キャプチャ 8 件 | それぞれ PNG が生成され、ファイルサイズと目視で内容を確認 |
 | 実行エラー | EnteredPlayMode 以降の Error / Exception / Assert は 0 件 |
 
 この検査では車両物理の式を Python 等へ置き換えず、Unity PhysX と Udon VM を実行しています。一方、実キーボードや VR 入力を使う人間の通しプレイではありません。内部入力値の設定と区間途中への配置による限定試験です。
@@ -59,14 +59,45 @@ SDK 3.10.5 の `VRCDefaultWorldScene.scenetemplate` は、参照先ファイル�
 - [直線のフリー走行](../images/clientsim-free-drive.png) — mode 1、通常加速の途中。
 - [タイムアタック開始](../images/clientsim-time-attack.png) — START 通過後、CP 1/10。完走の証拠ではありません。
 - [バンク区間](../images/clientsim-bank-section.png) — 途中配置後の mode 2。直線からバンクまでの連続操作は未検証。
-- [飛行区間](../images/clientsim-assisted-flight.png) — LAUNCH 手前への配置後、ゲート通過で mode 3。着地・一周完走は未検証。
+- [飛行区間](../images/clientsim-assisted-flight.png) — LAUNCH 手前への配置後、ゲート通過で mode 3。連続した飛行区間からの着地・一周完走は未検証。別途、一定条件の自動落下試験を実施。
 
 バンク・飛行の HUD にある `INVALID / reset or driver change` は、前のタイムアタックをリセットして自由走行の区間検証へ移ったためです。計測中の成功画像としては扱いません。
 
 ## 再現と残る検証
 
-Unity の **Drive Roadster → Run ClientSim smoke validation** を実行すると、同じ JSON と 4 枚の PNG を更新します。Editor 起動引数でも `-executeMethod RoadsterValidation.Run -roadsterExit` を指定できます。試験が失敗した場合は終了コード 1、全項目成功なら 0 です。
+Unity の **Drive Roadster → Run ClientSim smoke validation** を実行すると、同じ JSON と 8 枚の PNG を更新します。Editor 起動引数でも `-executeMethod RoadsterValidation.Run -roadsterExit` を指定できます。試験が失敗した場合は終了コード 1、全項目成功なら 0 です。
 
-未実施: VRChat SDK Validation / Build & Test、VRChat へのアップロード、実キーボード・コントローラー入力、HMD、複数クライアント、同時乗車、途中参加、切断、所有権移譲、記録のネットワーク引き継ぎ、連続一周、着地、練習用垂直カール/天井、VR の視認性・快適性、CPU/GPU フレーム時間、実ネットワーク帯域。詳細は [受入試験](../ACCEPTANCE_TESTS.ja.md) を参照してください。
+未実施: VRChat SDK Validation / Build & Test、VRChat へのアップロード、実キーボード・コントローラー入力、HMD、複数クライアント、同時乗車、途中参加、切断、所有権移譲、記録のネットワーク引き継ぎ、連続一周、全着地条件、練習用垂直カール/天井、VR の視認性・快適性、CPU/GPU フレーム時間、実ネットワーク帯域。詳細は [受入試験](../ACCEPTANCE_TESTS.ja.md) を参照してください。
 
 生の Unity ログはプロジェクトの `artifacts/` に残しています。ローカル環境情報を含むため Git 管理せず、公開する結果は本資料と JSON に限定します。
+
+## スラスター・着陸補助の追加検証
+
+最終実行UTC: `2026-10-17T07:43:14.9017487Z`。全 **39/39** 項目成功、Play Mode中の Error / Exception / Assert は0件。
+
+実際の Udon VM / PhysX に対し、傾いた空中姿勢、角速度付与、同じ初期状態の補助オン/オフ落下を実施しました。落下比較条件は高さ7 m、初期降下11 m/s、前進12 m/s。接地速度はサスペンション2本以上のヒットを検知する直前の法線方向接近速度です。実車測定や全条件の保証ではありません。
+
+既存揚力との連携検査だけは、飛行許可範囲内にPlay Mode限定の平面テスト台を設置し、高度3 m・降下2 m/s・前進28 m/sからmode 3を経由して接地することを確認しました。降下中の滑空揚力を解除し、着陸側の重力補償と重複させない修正を加えています。台は保存シーンへ含めず、画像用の検証は元コースを使用します。
+
+| 検査 | 実測ログ |
+|---|---|
+| Nozzle demand follows correction moment | torque=(-1.205, 0.000, 2.284); down jets=0.02219623,0.3418884,0,0.1731685,0,5.960465E-09,0 |
+| Nozzle exhaust follows body orientation | world downward angle=36.56 |
+| All seven exhaust directions oppose modeled force | minimum opposite-direction dot=1.000000 |
+| Air attitude error converges | initial=41.458; after 0.9 s=6.473 |
+| Angular velocity damping | initial=1.972; after .45 s=0.195 |
+| Unassisted control drop contacts road | touchdown approach=15.859 m/s; rebound=2.150 |
+| Precontact landing braking | highest braking clearance=7.000 m |
+| Ground mist begins before contact | mist observed at clearance=1.659 m |
+| Landing assistance reduces impact approach | baseline=15.859; assisted=1.862 m/s |
+| Ground settling without hovering | height=-0.035; vertical=0.000 |
+| Horizontal momentum retained | initial=12; after landing=11.138 m/s |
+| Postcontact rebound bounded | peak upward velocity=0.141 m/s |
+| Smoke persists after valve closes | at close=20; after .12 s=20 |
+| Smoke expires within lifetime | after 3.12 s=0 |
+| Assisted flight settles on temporary flat test pad | initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 122.180); speed=33.298; mode=1 |
+| Particle budget respected | whole-run peak=480; configured cap=1280 |
+
+画像用の追加降下は前進速度0で行い、[姿勢復元](../images/clientsim-thruster-attitude.png)、[接地前](../images/clientsim-thruster-approach.png)、[接地後](../images/clientsim-thruster-touchdown.png)、[噴射停止後](../images/clientsim-thruster-residual.png)を撮影しました。[設計・映像観察](../THRUSTERS.ja.md)。
+
+非 owner の物理処理が既存ガードを越えないことはソース確認です。複数クライアントの実通信・所有権移譲・遠隔の煙は未検証。粒子数は全試験中の観測最大と設定上限であり、GPU/VRフレーム時間の測定ではありません。

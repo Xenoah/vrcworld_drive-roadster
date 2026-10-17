@@ -37,6 +37,11 @@ public static class RoadsterValidation
     static bool scheduled;
     static Vector3 start;
     static int modeMask;
+    static float initialTilt, baselineImpact, assistedImpact, reboundPeak, brakeHeight, mistHeight;
+    static int particlePeak, contactStart, smokeAtStop;
+    static bool landingSample;
+    static GameObject flightLandingPad;
+    static string testLabel = "BASELINE SECTIONS";
     static readonly List<string> errors = new List<string>();
 
     static RoadsterValidation()
@@ -88,7 +93,7 @@ public static class RoadsterValidation
                 gpu = SystemInfo.graphicsDeviceName, cpu = SystemInfo.processorType };
             errors.Clear(); Application.logMessageReceived += Log;
             Application.runInBackground = true;
-            stage = 0; next = Time.time + 6f; scheduled = true;
+            stage = 0; particlePeak = 0; next = Time.time + 6f; scheduled = true;
         }
         if (state == PlayModeStateChange.EnteredEditMode)
         {
@@ -133,13 +138,36 @@ public static class RoadsterValidation
             {
                 modeMask |= 1 << V<int>(vehicle, "motionMode");
                 if (overlay != null) overlay.text = "UNITY PLAY MODE / CLIENTSIM - SCRIPTED SECTION TEST\n" +
-                    (body.velocity.magnitude * 3.6f).ToString("F0") + " km/h   MODE " + V<int>(vehicle,"motionMode") +
+                    testLabel + "\n" + (body.velocity.magnitude * 3.6f).ToString("F0") + " km/h   MODE " + V<int>(vehicle,"motionMode") +
                     "   CP " + V<int>(run,"nextGate") + "/10   " + V<string>(run,"status");
                 if (camera != null)
                 {
                     var up = body.transform.up;
                     camera.transform.position = body.position - body.transform.forward * 8f + up * 3.5f + body.transform.right * 3f;
                     camera.transform.LookAt(body.position + body.transform.forward * 3f + up * .7f, Vector3.up);
+                    if (stage >= 12)
+                    {
+                        camera.transform.position = body.position - body.transform.forward*6f + body.transform.right*6f + Vector3.up*1.6f;
+                        camera.transform.LookAt(body.position + Vector3.up*.3f,Vector3.up);
+                    }
+                }
+            }
+            if (vehicle != null && body != null)
+            {
+                int count = 0;
+                var jets = V<ParticleSystem[]>(vehicle,"thrusterJets");
+                var mist = V<ParticleSystem[]>(vehicle,"groundMist");
+                foreach (var ps in jets) count += ps.particleCount;
+                foreach (var ps in V<ParticleSystem[]>(vehicle,"thrusterSmoke")) count += ps.particleCount;
+                foreach (var ps in mist) count += ps.particleCount;
+                particlePeak = Mathf.Max(particlePeak,count);
+                if (landingSample)
+                {
+                    float height = V<float>(vehicle,"groundClearance");
+                    if (V<float>(vehicle,"landingAcceleration") > 1f) brakeHeight = Mathf.Max(brakeHeight,height);
+                    int clouds = 0; foreach (var ps in mist) clouds += ps.particleCount;
+                    if (clouds > 0 && V<int>(vehicle,"touchdownCount") == contactStart) mistHeight = Mathf.Max(mistHeight,height);
+                    if (V<int>(vehicle,"touchdownCount") > contactStart) reboundPeak = Mathf.Max(reboundPeak,body.velocity.y);
                 }
             }
             if (Time.time < next) return;
@@ -176,7 +204,7 @@ public static class RoadsterValidation
                     overlay.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); overlay.fontSize = 20;
                     overlay.color = Color.white;
                     var rect = overlay.rectTransform; rect.anchorMin = new Vector2(0,1); rect.anchorMax = new Vector2(1,1);
-                    rect.pivot = new Vector2(.5f,1); rect.anchoredPosition = new Vector2(14,-14); rect.sizeDelta = new Vector2(-28,80);
+                    rect.pivot = new Vector2(.5f,1); rect.anchoredPosition = new Vector2(14,-14); rect.sizeDelta = new Vector2(-28,110);
                     overlay.gameObject.AddComponent<UnityEngine.UI.Shadow>();
                     var gates = V<Transform[]>(run, "gates");
                     float maxError = 0;
@@ -228,9 +256,128 @@ public static class RoadsterValidation
                     break;
                 case 10:
                     Check("Discontinuity invalidates run", !V<bool>(run,"running") && V<string>(run,"status").Contains("discontinuity"), V<string>(run,"status"));
-                    Event(vehicle,"Recover"); Event(vehicle,"ExitVehicle"); next = Time.time + 1f;
+                    Event(vehicle,"Recover"); next = Time.time + .2f;
                     break;
                 case 11:
+                    testLabel = "ATTITUDE RECOVERY / SCRIPTED TILT";
+                    Place(new Vector3(0,22,100),Quaternion.Euler(18,0,-38),new Vector3(0,0,6));
+                    initialTilt = Vector3.Angle(body.transform.up,Vector3.up);
+                    next = Time.time + .18f;
+                    break;
+                case 12:
+                    var demand = V<float[]>(vehicle,"thrusterDemand");
+                    var torque = V<Vector3>(vehicle,"attitudeCommand");
+                    float rollMoment = -demand[0]+demand[1]-demand[2]+demand[3];
+                    float pitchMoment = -demand[0]-demand[1]+demand[2]+demand[3];
+                    Check("Nozzle demand follows correction moment", rollMoment*torque.z > 0 && pitchMoment*torque.x > 0,
+                        "torque="+torque.ToString("F3")+"; down jets="+string.Join(",",demand));
+                    var nozzle = V<ParticleSystem[]>(vehicle,"thrusterJets")[0].transform;
+                    Check("Nozzle exhaust follows body orientation",Vector3.Dot(nozzle.forward,-body.transform.up)>.999f && Vector3.Angle(nozzle.forward,Vector3.down)>10,
+                        "world downward angle="+Vector3.Angle(nozzle.forward,Vector3.down).ToString("F2"));
+                    Vector3[] modeledForces = { Vector3.up,Vector3.up,Vector3.up,Vector3.up,Vector3.right,Vector3.left,Vector3.forward };
+                    var allJets = V<ParticleSystem[]>(vehicle,"thrusterJets");
+                    float minimumOpposition=1f;
+                    for(int j=0;j<7;j++) minimumOpposition=Mathf.Min(minimumOpposition,Vector3.Dot(-allJets[j].transform.forward,body.transform.TransformDirection(modeledForces[j])));
+                    Check("All seven exhaust directions oppose modeled force",minimumOpposition>.999f,"minimum opposite-direction dot="+minimumOpposition.ToString("F6"));
+                    Capture("clientsim-thruster-attitude"); next = Time.time + .72f;
+                    break;
+                case 13:
+                    float tilt = Vector3.Angle(body.transform.up,Vector3.up);
+                    Check("Air attitude error converges",tilt < initialTilt*.55f,"initial="+initialTilt.ToString("F3")+"; after 0.9 s="+tilt.ToString("F3"));
+                    Place(new Vector3(0,22,100),Quaternion.identity,Vector3.zero);
+                    body.angularVelocity = new Vector3(1.5f,.8f,-1f); next = Time.time+.45f;
+                    break;
+                case 14:
+                    Check("Angular velocity damping",body.angularVelocity.magnitude < .8f,"initial=1.972; after .45 s="+body.angularVelocity.magnitude.ToString("F3"));
+                    testLabel="LANDING A/B / ASSIST DISABLED";
+                    Place(new Vector3(0,7,80),Quaternion.identity,new Vector3(0,-11,12));
+                    vehicle.SetProgramVariable("landingAssistEnabled",false);
+                    contactStart=V<int>(vehicle,"touchdownCount"); landingSample=true; reboundPeak=0; brakeHeight=0; mistHeight=0;
+                    next=Time.time+1.5f;
+                    break;
+                case 15:
+                    baselineImpact=V<float>(vehicle,"lastTouchdownSpeed");
+                    Check("Unassisted control drop contacts road",V<int>(vehicle,"touchdownCount")>contactStart && baselineImpact>10,
+                        "touchdown approach="+baselineImpact.ToString("F3")+" m/s; rebound="+reboundPeak.ToString("F3"));
+                    testLabel="LANDING A/B / HEIGHT + CLOSING SPEED BRAKE";
+                    Place(new Vector3(0,7,80),Quaternion.identity,new Vector3(0,-11,12));
+                    vehicle.SetProgramVariable("landingAssistEnabled",true);
+                    contactStart=V<int>(vehicle,"touchdownCount"); reboundPeak=0; brakeHeight=0; mistHeight=0;
+                    next=Time.time+.65f;
+                    break;
+                case 16:
+                    next=Time.time+.6f;
+                    break;
+                case 17:
+                    next=Time.time+1.2f;
+                    break;
+                case 18:
+                    assistedImpact=V<float>(vehicle,"lastTouchdownSpeed"); landingSample=false;
+                    Check("Precontact landing braking",brakeHeight>3f,"highest braking clearance="+brakeHeight.ToString("F3")+" m");
+                    Check("Ground mist begins before contact",mistHeight>.2f,"mist observed at clearance="+mistHeight.ToString("F3")+" m");
+                    Check("Landing assistance reduces impact approach",V<int>(vehicle,"touchdownCount")>contactStart && assistedImpact<baselineImpact*.6f,
+                        "baseline="+baselineImpact.ToString("F3")+"; assisted="+assistedImpact.ToString("F3")+" m/s");
+                    Check("Ground settling without hovering",Mathf.Abs(body.velocity.y)<.3f && body.position.y<.2f,"height="+body.position.y.ToString("F3")+"; vertical="+body.velocity.y.ToString("F3"));
+                    Check("Horizontal momentum retained",body.velocity.z>10f,"initial=12; after landing="+body.velocity.z.ToString("F3")+" m/s");
+                    Check("Postcontact rebound bounded",reboundPeak<1.5f,"peak upward velocity="+reboundPeak.ToString("F3")+" m/s");
+                    // Stop valve output in mid-air without clearing particles: residual smoke must age naturally.
+                    Place(new Vector3(0,18,100),Quaternion.Euler(0,0,-40),Vector3.zero);
+                    next=Time.time+.3f;
+                    break;
+                case 19:
+                    vehicle.SetProgramVariable("attitudeStrength",0f); vehicle.SetProgramVariable("attitudeDamping",0f);
+                    body.rotation=Quaternion.identity; body.angularVelocity=Vector3.zero;
+                    vehicle.SetProgramVariable("landingAssistEnabled",false);
+                    smokeAtStop=0; foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterSmoke")) smokeAtStop+=ps.particleCount;
+                    next=Time.time+.12f;
+                    break;
+                case 20:
+                    int residual=0; foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterSmoke")) residual+=ps.particleCount;
+                    Check("Smoke persists after valve closes",smokeAtStop>0 && residual>0,"at close="+smokeAtStop+"; after .12 s="+residual);
+                    next=Time.time+3f;
+                    break;
+                case 21:
+                    int expired=0; foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterSmoke")) expired+=ps.particleCount;
+                    Check("Smoke expires within lifetime",expired==0,"after 3.12 s="+expired);
+                    vehicle.SetProgramVariable("attitudeStrength",9f); vehicle.SetProgramVariable("attitudeDamping",4.5f);
+                    vehicle.SetProgramVariable("landingAssistEnabled",true);
+                    testLabel="SCRIPTED VERTICAL DROP / APPROACH PLUMES";
+                    Place(new Vector3(0,7,100),Quaternion.identity,new Vector3(0,-11,0));
+                    next=Time.time+.6f;
+                    break;
+                case 22:
+                    Capture("clientsim-thruster-approach"); next=Time.time+.75f;
+                    break;
+                case 23:
+                    testLabel="SCRIPTED VERTICAL DROP / TOUCHDOWN MIST";
+                    Capture("clientsim-thruster-touchdown"); next=Time.time+.7f;
+                    break;
+                case 24:
+                    testLabel="THRUST OFF / WORLD-SPACE RESIDUAL MIST";
+                    Capture("clientsim-thruster-residual"); next=Time.time+1f;
+                    break;
+                case 25:
+                    testLabel="ASSISTED FLIGHT / TEMPORARY FLAT LANDING FIXTURE";
+                    flightLandingPad=GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    flightLandingPad.name="Validation-only landing pad";
+                    flightLandingPad.transform.position=new Vector3(180,19.9f,80);
+                    flightLandingPad.transform.localScale=new Vector3(12,.2f,120);
+                    Place(new Vector3(180,23,40),Quaternion.identity,new Vector3(0,-2,28));
+                    Event(vehicle,"EnableFlight"); contactStart=V<int>(vehicle,"touchdownCount"); modeMask=0;
+                    next=Time.time+2.6f;
+                    break;
+                case 26:
+                    Check("Assisted flight settles on temporary flat test pad",(modeMask&(1<<3))!=0 && V<int>(vehicle,"touchdownCount")>contactStart && V<int>(vehicle,"motionMode")==1 && Mathf.Abs(body.position.y-20)<.2f,
+                        "initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: "+Pose());
+                    Event(vehicle,"Recover"); Event(vehicle,"ExitVehicle");
+                    UnityEngine.Object.Destroy(flightLandingPad); next=Time.time+1f;
+                    break;
+                case 27:
+                    int configuredBudget=0;
+                    foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterJets")) configuredBudget+=ps.main.maxParticles;
+                    foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterSmoke")) configuredBudget+=ps.main.maxParticles;
+                    foreach(var ps in V<ParticleSystem[]>(vehicle,"groundMist")) configuredBudget+=ps.main.maxParticles;
+                    Check("Particle budget respected",configuredBudget==1280 && particlePeak>0 && particlePeak<=configuredBudget,"whole-run peak="+particlePeak+"; configured cap="+configuredBudget);
                     Check("Station exit releases driver", !V<bool>(vehicle,"localSeated") && V<int>(vehicle,"driverId") == -1, "driver=" + V<int>(vehicle,"driverId"));
                     foreach (var path in report.captures) Check("Capture " + Path.GetFileName(path), File.Exists(path) && new FileInfo(path).Length > 10000, File.Exists(path) ? new FileInfo(path).Length + " bytes" : "missing");
                     Check("No runtime errors", errors.Count == 0, string.Join("\n", errors));

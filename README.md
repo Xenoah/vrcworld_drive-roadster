@@ -4,7 +4,7 @@
 
 ## 検証状態
 
-2026-10-17、Windows 上の **Unity 2022.3.22f1 / VRChat SDK 3.10.5** で C#・UdonSharp コンパイルとシーン構築を実施しました。**ClientSim の区間スモーク試験 19/19 項目成功**。乗降、直線加速、タイムアタックの START 通過、リセット、バンク接地、LAUNCH 通過からのアシスト飛行、不連続移動による失格を確認しています。
+2026-10-17、Windows 上の **Unity 2022.3.22f1 / VRChat SDK 3.10.5** で C#・UdonSharp コンパイルとシーン構築を実施しました。**ClientSim の区間スモーク試験 39/39 項目成功**。乗降、直線加速、タイムアタックの START 通過、リセット、バンク接地、LAUNCH 通過からのアシスト飛行、不連続移動による失格、姿勢補助・3層白煙・着陸補助を確認しています。
 
 Python 静的・数理検査 33 件と C# 構文解析も成功。実行条件と生の検査値は [Unity 検証記録](docs/validation/UNITY_VALIDATION.ja.md) / [JSON](docs/validation/clientsim-smoke.json) を参照してください。
 
@@ -29,6 +29,29 @@ Python 静的・数理検査 33 件と C# 構文解析も成功。実行条件�
 ![ClientSim LAUNCH 通過後のアシスト飛行](docs/images/clientsim-assisted-flight.png)
 
 LAUNCH 手前へ配置してからゲート面を横切り、mode 3 に移行した飛行区間。着地・完走は未検証です。バンクと飛行の INVALID 表示は、先行する計測をリセットして自由走行の試験へ移った結果です。
+
+## スラスター姿勢制御・白煙・着地
+
+公式 [Kickflip](https://x.com/Tesla/status/2110926164306931860) / [Ramp](https://x.com/Tesla/status/2110913438293647789) の回転中の噴流、接地前から広がる雲、停止後の残留霧を再観察して追加しました。映像の見える振る舞いを参考にしたゲーム補助であり、実車の内部機構や性能を断定する実装ではありません。時刻付き観察、式、全パラメーター、ノズル対応は [詳細技術資料](docs/THRUSTERS.ja.md) を参照してください。
+
+- **姿勢**: 空中の Quaternion 姿勢誤差と実角速度から PD トルクを算出。四隅の下向きノズルと左右ノズルの強弱を、その補正の方向に対応させます。ジェット方向は車体の回転に追従します。
+- **着陸**: 路面までの高さと接近速度から接地前の制動量を計算。最大42 m/s²の車体上向き補助で降下を緩和し、接地後0.35秒の過大反発を抑えます。地上では着陸噴射を止めます。低高度で降下中は既存の滑空揚力を解除し、着陸制動との重複を防ぎます。
+- **白煙**: 細い Local ジェット、World の残留煙、排気方向の Raycast が路面へ当たった地点の拡散霧の3層。接地前から霧を生成し、噴射停止後も寿命まで残ります。
+- **負荷と同期**: 18個の ParticleSystem を再利用、最大1,280粒子。7噴射強度を2個の同期 int へ量子化し、既存スナップショットで送ります。物理は owner のみ。実ネットワークと GPU 負荷は未測定です。
+
+![姿勢補正に応じた噴流](docs/images/clientsim-thruster-attitude.png)
+
+Unity Editor Play Mode / ClientSim。傾けて配置した車体の姿勢復元中。スクリプトによる区間検証で、公式映像ではありません。
+
+![接地前のスラスター噴射](docs/images/clientsim-thruster-approach.png)
+
+同環境。高さ7 m・初期降下速度11 m/sの自動垂直降下で、接地前に制動と白煙が発生。
+
+![接地付近の拡散霧](docs/images/clientsim-thruster-touchdown.png)
+
+同環境。接地付近の路面上の霧。[噴射停止後の残留画像](docs/images/clientsim-thruster-residual.png)も掲載しています。
+
+補助オン／オフ比較は別の共通条件（高さ7 m、降下11 m/s、前進12 m/s）で行いました。実測値は [検証報告](docs/validation/UNITY_VALIDATION.ja.md) と [JSON](docs/validation/clientsim-smoke.json) に記載しています。地上での静止、横速度の維持、煙の寿命も確認しました。連続した全周走行・斜面を含む全着地条件・HMD・複数クライアントは未検証です。
 
 ## 操作
 
@@ -71,6 +94,7 @@ LAUNCH 手前へ配置してからゲート面を横切り、mode 3 に移行し
 | `Assets/DriveRoadster/Scripts/RoadsterRun.cs` | ゲート判定、タイマー、失格、参考記録、HUD |
 | `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | RESTART / TIME ATTACK / EXIT の Interact |
 | `Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs` | FBX と manifest からシーン・座席・HUD・LOD を生成 |
+| `Assets/DriveRoadster/Editor/RoadsterThrusterSetup.cs` | ノズル参照と3層のParticleSystem・白煙材質を生成 |
 | `Assets/DriveRoadster/Editor/RoadsterValidation.cs` | Editor 限定 ClientSim 検証。ワールド実行コードには含まれない |
 | `Assets/DriveRoadster/Art/Vehicle/` | 車両 LOD0–2 の FBX / GLB、材質テクスチャ、幾何統計 |
 | `Assets/DriveRoadster/Art/Course/` | コース FBX / GLB、`course_manifest.json` |
@@ -107,7 +131,7 @@ LAUNCH 手前へ配置してからゲート面を横切り、mode 3 に移行し
 
 - **owner だけが物理を計算**。非 owner の Rigidbody は kinematic で、受信位置・姿勢を補間します。owner の CCD は ContinuousDynamic、非 owner は ContinuousSpeculative です。
 - Vehicle と Run は同一 GameObject 上の Manual 同期です。`VRCObjectSync` は併用しません。運転中は .12 秒、無人時は 1 秒ごとに送信を要求します。これは要求周期であり、実送信間隔や帯域の保証ではありません。
-- 車両は driver ID、世代、モード、位置・回転・速度、reset sequence を同期。受信側は速度から最大 .18 秒先まで外挿し、指数補間を適用します。最初の受信と reset sequence 変更時は即座に位置を合わせます。
+- 車両は driver ID、世代、モード、位置・回転・速度、reset sequence と7ノズルの噴射強度（2 intへ量子化）を同期。受信側は速度から最大 .18 秒先まで外挿し、指数補間を適用します。最初の受信と reset sequence 変更時は即座に位置を合わせます。
 - 乗車前に `IsNetworkSettled` を確認し、非 owner は初回スナップショットも待ちます。所有権要求後 .4 秒待ち、自分が owner かつ空席なら Station へ入ります。2 秒後も着座していなければ解放します。
 - owner を失った運転者は退出します。通常降車・driver の切断・無人時の自動所有権移譲では旧 run を取り消し、スタートへ復帰します。安全な退出先はパドック側の player spawn です。
 - .4 秒の待機は合意プロトコルではありません。同時乗車、遅延、途中参加、切断、所有権移譲のイベント順は **複数クライアント未検証** です。
@@ -149,7 +173,7 @@ LAUNCH 手前へ配置してからゲート面を横切り、mode 3 に移行し
 
 ## 既知の制約
 
-- フルラップ、垂直カール/天井の練習区間、着地の安定性、逆走からの復帰は継続調整が必要です。
+- フルラップ、垂直カール/天井の練習区間、斜面・高速・強い傾きを含む着地の安定性、逆走からの復帰は継続調整が必要です。
 - 車体 FBX の軸・車輪回転、コックピット表示とボタンの大きさ、Station の視点は PC/VR の実機確認が必要です。
 - カメラの強制ロールや揺れ演出は追加していませんが、Station と車体回転による VR 快適性を検証した意味ではありません。
 - 4 台化、助手席、車同士の衝突競技、モバイル/Quest 対応、永続記録は未実装です。

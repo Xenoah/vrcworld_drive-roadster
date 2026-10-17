@@ -1,17 +1,23 @@
 {
+  "utc": "2026-10-17T07:43:14.9017487Z",
   "algorithm": "SHA-256",
-  "scope": "Final local sources, generated scene, ClientSim report and unedited Game View captures",
+  "text_normalization": "UTF-8 LF for .cs, .unity and .json; binary files unchanged",
   "files": {
-    "Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs": "ebe7cdefcb5f3de1620ca845fc0e6a30da8e0a81690bfd1e9a507f1d6b021d1e",
-    "Assets/DriveRoadster/Editor/RoadsterValidation.cs": "195654d44cb4fd0cb5c362577d5a405debe79c5c4e48f6a0ec7f36107bfd07e2",
-    "Assets/DriveRoadster/Scenes/DriveRoadster.unity": "1f95002d71429015d6f476c783eb909e7e2dee4c7242f1315917f322b18fdcfc",
-    "Assets/DriveRoadster/Scripts/RoadsterAction.cs": "a668807a4e4fe4945161bd5aa032c8290afd43a87158f60e0f3e3ecdc7b36d06",
-    "Assets/DriveRoadster/Scripts/RoadsterRun.cs": "1a1d1910a6d1c4c95f16fee1a8f3750cf5f2b08d2049c7aebdff4d8fca40d567",
-    "Assets/DriveRoadster/Scripts/RoadsterVehicle.cs": "0c9fbcd4d31cfb8dc2384987f16e5fc34b5f1f22a9e4dad1b8554b88b5ce11f4",
-    "docs/images/clientsim-assisted-flight.png": "d05dd499f7e9e380c626330269b90b11e3fc6f5bace142cd9ad2c8ee243a5eee",
-    "docs/images/clientsim-bank-section.png": "5f524f3ca31887d077992d98c05345310056766e1d1a659a392ab24970d05668",
-    "docs/images/clientsim-free-drive.png": "8a9f2269cdde77159a79c9f41f76c4f689822cc7d3b888af9cea6a0418ba4180",
-    "docs/images/clientsim-time-attack.png": "b309d15cd7133c19a6fe43c2797ac524b5b8c2192f223841986e204064911150",
-    "docs/validation/clientsim-smoke.json": "b9337e03a2045e31052c22245eb360bc77d0765675447c0096cfba2e8189f1b6"
+    "Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs": "870de0d6791660bc410bd1d7ceacafe92e172b2a5bd2a50815bfe5ce60060122",
+    "Assets/DriveRoadster/Editor/RoadsterThrusterSetup.cs": "786e2c653389149f917152b423c41aaf81d472447191911ebff78ebe848571f1",
+    "Assets/DriveRoadster/Editor/RoadsterValidation.cs": "6898ec218554275b53215ef6f1daa99dc339e126e6aa7733d608a97733ccbc76",
+    "Assets/DriveRoadster/Scenes/DriveRoadster.unity": "6833cbc6d3e9442651ca1c6975235b6d84a57f38a1f2a859ad6368079b2a2b7e",
+    "Assets/DriveRoadster/Scripts/RoadsterAction.cs": "645a089e7ae00f9056ce20b2f9d995024a92c7ab6eb63964c1d5f940bc63c59d",
+    "Assets/DriveRoadster/Scripts/RoadsterRun.cs": "450a2815f3e6cb289066924d4c0f0731468cfa5256042fb34d19e9158fabc734",
+    "Assets/DriveRoadster/Scripts/RoadsterVehicle.cs": "c8439ddca6aeaf66d7291527c502e6f80d82fc2d776197268cb917a37d45e4b7",
+    "docs/images/clientsim-assisted-flight.png": "6c8a39d8822252711e22b7070a8d2e1fdef0c70504d00c0f6e1e22d461debfd7",
+    "docs/images/clientsim-bank-section.png": "c5d93b33349786f6b673e2a09594581916ac004cf7dce221461ca00471cc2ada",
+    "docs/images/clientsim-free-drive.png": "7cf8a676238d9284337dcfbed5ddc667bdb7d4fdc8e2c1d937cf0493bfffa327",
+    "docs/images/clientsim-thruster-approach.png": "88be65406aa631eee732693ae64a2a8fa38d58f3b06cdbb9c2d955c8b1a3316b",
+    "docs/images/clientsim-thruster-attitude.png": "2cdb71ecfaf82e6c7796adcbd3d172810913ee9f07eefad9b40986ad388667ed",
+    "docs/images/clientsim-thruster-residual.png": "7badfb7d616c826d6704dbad31736b46757f31895b1dd5cb9e1ab77ca1d5f660",
+    "docs/images/clientsim-thruster-touchdown.png": "23075d67d06c18935a3648eac77593012d1a3ff05c48c113210bca97692d24d4",
+    "docs/images/clientsim-time-attack.png": "1667a5a90a122b8c3de83ca9d6281e5dde1be5a9ec530f6ad86e99f13a0efec0",
+    "docs/validation/clientsim-smoke.json": "2bd21ab9b209943750e7f3a605f94cf3d3f9039ff0c6561274032f966598f82f"
   }
 }

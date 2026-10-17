@@ -1,5 +1,5 @@
 {
-    "utc": "2026-10-17T07:17:05.7589913Z",
+    "utc": "2026-10-17T07:43:14.9017487Z",
     "unity": "2022.3.22f1",
     "sdk": "3.10.5",
     "environment": "Unity Editor Play Mode / ClientSim / one local simulated player / scripted inputs and section placements",
@@ -59,17 +59,97 @@
         {
             "name": "Banked section contact",
             "passed": true,
-            "detail": "position=(102.679, 7.466, 339.147); speed=15.746; mode=2; modeMask=22; scripted placement at 72 degree bank"
+            "detail": "position=(102.597, 7.432, 339.146); speed=15.650; mode=2; modeMask=22; scripted placement at 72 degree bank"
         },
         {
             "name": "Free drive launch gate and assisted flight",
             "passed": true,
-            "detail": "position=(180.000, 17.015, 80.993); speed=52.036; mode=3; modeMask=26"
+            "detail": "position=(180.000, 17.792, 80.981); speed=52.124; mode=3; modeMask=26"
         },
         {
             "name": "Discontinuity invalidates run",
             "passed": true,
             "detail": "INVALID / discontinuity"
+        },
+        {
+            "name": "Nozzle demand follows correction moment",
+            "passed": true,
+            "detail": "torque=(-1.205, 0.000, 2.284); down jets=0.02219623,0.3418884,0,0.1731685,0,5.960465E-09,0"
+        },
+        {
+            "name": "Nozzle exhaust follows body orientation",
+            "passed": true,
+            "detail": "world downward angle=36.56"
+        },
+        {
+            "name": "All seven exhaust directions oppose modeled force",
+            "passed": true,
+            "detail": "minimum opposite-direction dot=1.000000"
+        },
+        {
+            "name": "Air attitude error converges",
+            "passed": true,
+            "detail": "initial=41.458; after 0.9 s=6.473"
+        },
+        {
+            "name": "Angular velocity damping",
+            "passed": true,
+            "detail": "initial=1.972; after .45 s=0.195"
+        },
+        {
+            "name": "Unassisted control drop contacts road",
+            "passed": true,
+            "detail": "touchdown approach=15.859 m/s; rebound=2.150"
+        },
+        {
+            "name": "Precontact landing braking",
+            "passed": true,
+            "detail": "highest braking clearance=7.000 m"
+        },
+        {
+            "name": "Ground mist begins before contact",
+            "passed": true,
+            "detail": "mist observed at clearance=1.659 m"
+        },
+        {
+            "name": "Landing assistance reduces impact approach",
+            "passed": true,
+            "detail": "baseline=15.859; assisted=1.862 m/s"
+        },
+        {
+            "name": "Ground settling without hovering",
+            "passed": true,
+            "detail": "height=-0.035; vertical=0.000"
+        },
+        {
+            "name": "Horizontal momentum retained",
+            "passed": true,
+            "detail": "initial=12; after landing=11.138 m/s"
+        },
+        {
+            "name": "Postcontact rebound bounded",
+            "passed": true,
+            "detail": "peak upward velocity=0.141 m/s"
+        },
+        {
+            "name": "Smoke persists after valve closes",
+            "passed": true,
+            "detail": "at close=20; after .12 s=20"
+        },
+        {
+            "name": "Smoke expires within lifetime",
+            "passed": true,
+            "detail": "after 3.12 s=0"
+        },
+        {
+            "name": "Assisted flight settles on temporary flat test pad",
+            "passed": true,
+            "detail": "initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 122.180); speed=33.298; mode=1"
+        },
+        {
+            "name": "Particle budget respected",
+            "passed": true,
+            "detail": "whole-run peak=480; configured cap=1280"
         },
         {
             "name": "Station exit releases driver",
@@ -79,22 +159,42 @@
         {
             "name": "Capture clientsim-free-drive.png",
             "passed": true,
-            "detail": "224001 bytes"
+            "detail": "230750 bytes"
         },
         {
             "name": "Capture clientsim-time-attack.png",
             "passed": true,
-            "detail": "220297 bytes"
+            "detail": "225874 bytes"
         },
         {
             "name": "Capture clientsim-bank-section.png",
             "passed": true,
-            "detail": "322946 bytes"
+            "detail": "328264 bytes"
         },
         {
             "name": "Capture clientsim-assisted-flight.png",
             "passed": true,
-            "detail": "399713 bytes"
+            "detail": "439763 bytes"
+        },
+        {
+            "name": "Capture clientsim-thruster-attitude.png",
+            "passed": true,
+            "detail": "311595 bytes"
+        },
+        {
+            "name": "Capture clientsim-thruster-approach.png",
+            "passed": true,
+            "detail": "272346 bytes"
+        },
+        {
+            "name": "Capture clientsim-thruster-touchdown.png",
+            "passed": true,
+            "detail": "274023 bytes"
+        },
+        {
+            "name": "Capture clientsim-thruster-residual.png",
+            "passed": true,
+            "detail": "295440 bytes"
         },
         {
             "name": "No runtime errors",
@@ -106,6 +206,10 @@
         "docs/images/clientsim-free-drive.png",
         "docs/images/clientsim-time-attack.png",
         "docs/images/clientsim-bank-section.png",
-        "docs/images/clientsim-assisted-flight.png"
+        "docs/images/clientsim-assisted-flight.png",
+        "docs/images/clientsim-thruster-attitude.png",
+        "docs/images/clientsim-thruster-approach.png",
+        "docs/images/clientsim-thruster-touchdown.png",
+        "docs/images/clientsim-thruster-residual.png"
     ]
 }

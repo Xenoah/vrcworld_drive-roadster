@@ -115,6 +115,7 @@ public static class BuildRoadsterWorld
                 vehicle.wheels[level * 4 + i] = pivot;
             }
         }
+        RoadsterThrusterSetup.Build(vehicle, model.transform);
         run.gates = new Transform[data.checkpoints.Length];
         run.gateHalfWidths = new float[run.gates.Length]; run.gateHalfHeights = new float[run.gates.Length]; run.requiredModes = new int[run.gates.Length];
         for (int i = 0; i < run.gates.Length; i++)
