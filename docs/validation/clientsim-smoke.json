@@ -1,0 +1,111 @@
+{
+    "utc": "2026-10-17T07:17:05.7589913Z",
+    "unity": "2022.3.22f1",
+    "sdk": "3.10.5",
+    "environment": "Unity Editor Play Mode / ClientSim / one local simulated player / scripted inputs and section placements",
+    "gpu": "NVIDIA GeForce RTX 3070",
+    "cpu": "AMD Ryzen 9 5950X 16-Core Processor ",
+    "checks": [
+        {
+            "name": "ClientSim initialized",
+            "passed": true,
+            "detail": "one local player"
+        },
+        {
+            "name": "Udon programs initialized",
+            "passed": true,
+            "detail": "Vehicle and Run backing behaviours"
+        },
+        {
+            "name": "Scene colliders",
+            "passed": true,
+            "detail": "mesh colliders=15"
+        },
+        {
+            "name": "Vehicle LODs",
+            "passed": true,
+            "detail": "3 LOD levels"
+        },
+        {
+            "name": "Wheel visual pivots connected",
+            "passed": true,
+            "detail": "connected=12/12"
+        },
+        {
+            "name": "FBX markers match manifest",
+            "passed": true,
+            "detail": "maximum position error=0.000000 m"
+        },
+        {
+            "name": "Station entry",
+            "passed": true,
+            "detail": "driver=1"
+        },
+        {
+            "name": "Free drive acceleration",
+            "passed": true,
+            "detail": "position=(0.000, -0.035, 39.651); speed=41.950; mode=1"
+        },
+        {
+            "name": "Time attack start gate",
+            "passed": true,
+            "detail": "nextGate=1; TIME ATTACK"
+        },
+        {
+            "name": "Reset cancels run",
+            "passed": true,
+            "detail": "position=(0.000, 0.100, -12.000); speed=0.000; mode=1"
+        },
+        {
+            "name": "Banked section contact",
+            "passed": true,
+            "detail": "position=(102.679, 7.466, 339.147); speed=15.746; mode=2; modeMask=22; scripted placement at 72 degree bank"
+        },
+        {
+            "name": "Free drive launch gate and assisted flight",
+            "passed": true,
+            "detail": "position=(180.000, 17.015, 80.993); speed=52.036; mode=3; modeMask=26"
+        },
+        {
+            "name": "Discontinuity invalidates run",
+            "passed": true,
+            "detail": "INVALID / discontinuity"
+        },
+        {
+            "name": "Station exit releases driver",
+            "passed": true,
+            "detail": "driver=-1"
+        },
+        {
+            "name": "Capture clientsim-free-drive.png",
+            "passed": true,
+            "detail": "224001 bytes"
+        },
+        {
+            "name": "Capture clientsim-time-attack.png",
+            "passed": true,
+            "detail": "220297 bytes"
+        },
+        {
+            "name": "Capture clientsim-bank-section.png",
+            "passed": true,
+            "detail": "322946 bytes"
+        },
+        {
+            "name": "Capture clientsim-assisted-flight.png",
+            "passed": true,
+            "detail": "399713 bytes"
+        },
+        {
+            "name": "No runtime errors",
+            "passed": true,
+            "detail": ""
+        }
+    ],
+    "captures": [
+        "docs/images/clientsim-free-drive.png",
+        "docs/images/clientsim-time-attack.png",
+        "docs/images/clientsim-bank-section.png",
+        "docs/images/clientsim-assisted-flight.png"
+    ]
+}

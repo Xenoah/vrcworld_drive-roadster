@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA = json.loads((ROOT / 'Assets/DriveRoadster/Art/Course/course_manifest.json').read_text())
+DATA = json.loads((ROOT / 'Assets/DriveRoadster/Art/Course/course_manifest.json').read_text(encoding="utf-8"))
 
 
 def dot(a, b):
@@ -73,7 +73,7 @@ class GateGeometry(unittest.TestCase):
             self.assertFalse(crosses(gate, point(gate, 0, 0, 0), point(gate, 0, 0, 1)))
 
     def test_flight_modes_have_explicit_builder_mapping(self):
-        source = (ROOT / 'Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs').read_text()
+        source = (ROOT / 'Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs').read_text(encoding="utf-8")
         self.assertIn('gate.required_mode == "AssistedFlight"', source)
         self.assertIn('Unknown gate mode', source)
         for i in range(DATA['flightStartGate']+1, DATA['flightEndGate']):

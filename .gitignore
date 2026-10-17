@@ -23,3 +23,14 @@ artifacts/
 *.blend1
 *.blend2
 .env
+
+# SDK-generated utility copies and serialized programs; keep only our 3 programs.
+Assets/UdonSharp/
+Assets/UdonSharp.meta
+Assets/SerializedUdonPrograms/*
+!Assets/SerializedUdonPrograms/943a69034a2b7fd4aa920ec57462daba.asset
+!Assets/SerializedUdonPrograms/943a69034a2b7fd4aa920ec57462daba.asset.meta
+!Assets/SerializedUdonPrograms/c0d343a65bfbf724892eb5761202ea13.asset
+!Assets/SerializedUdonPrograms/c0d343a65bfbf724892eb5761202ea13.asset.meta
+!Assets/SerializedUdonPrograms/c7a66e9277678084eb7a8d56257829a1.asset
+!Assets/SerializedUdonPrograms/c7a66e9277678084eb7a8d56257829a1.asset.meta

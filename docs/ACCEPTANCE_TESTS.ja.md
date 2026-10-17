@@ -1,6 +1,6 @@
 # 公開前の実機受入テスト
 
-現在: 全項目未実施。Pythonの静的/数理テストはこの試験を代替しない。
+2026-10-17: Unity C# / UdonSharp コンパイルと ClientSim の限定区間スモーク試験は実施済み。結果と条件は [Unity 検証記録](validation/UNITY_VALIDATION.ja.md) を参照。以下の実クライアント・VR・複数人受入試験は未実施。Python 検査や ClientSim はこれらを代替しない。
 
 ## コンパイル/シーン
 - VCC WorldsプロジェクトでC#とUdonSharpの両コンパイルが成功する。

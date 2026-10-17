@@ -11,3 +11,4 @@ jobs:
       - run: python -m pip install tree-sitter==0.26.0 tree-sitter-c-sharp==0.23.5
       - run: python tools/check_csharp_syntax.py
       - run: python -m unittest discover -s tests -v
+      - run: python -m unittest discover -s Tests/Review -v

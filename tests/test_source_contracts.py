@@ -3,7 +3,7 @@ import json, math, pathlib, unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 class SourceContracts(unittest.TestCase):
     def test_course_schema(self):
-        d = json.loads((ROOT/'Assets/DriveRoadster/Art/Course/course_manifest.json').read_text())
+        d = json.loads((ROOT/'Assets/DriveRoadster/Art/Course/course_manifest.json').read_text(encoding="utf-8"))
         gates = d['checkpoints']
         self.assertGreaterEqual(len(gates), 10)
         self.assertEqual([g['index'] for g in gates], list(range(len(gates))))
@@ -22,24 +22,25 @@ class SourceContracts(unittest.TestCase):
         self.assertLess(sum(delta[i]*gates[0]['forward'][i] for i in range(3)), 0)
         self.assertLess(math.dist(gates[0]['position'], gates[-1]['position']), 5)
     def test_authority_guards(self):
-        s=(ROOT/'Assets/DriveRoadster/Scripts/RoadsterVehicle.cs').read_text()
+        s=(ROOT/'Assets/DriveRoadster/Scripts/RoadsterVehicle.cs').read_text(encoding="utf-8")
         self.assertIn('if (!Networking.IsOwner(gameObject)) return;', s)
         self.assertIn('OnOwnershipRequest',s); self.assertIn('OnOwnershipTransferred',s)
         self.assertIn('OnPlayerLeft',s); self.assertIn('OnDeserialization',s)
         self.assertIn('observedReset != resetSequence',s)
-        self.assertNotIn('AddComponent<VRCObjectSync>',(ROOT/'Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs').read_text())
+        self.assertNotIn('AddComponent<VRCObjectSync>',(ROOT/'Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs').read_text(encoding="utf-8"))
     def test_swept_gate_contract(self):
-        s=(ROOT/'Assets/DriveRoadster/Scripts/RoadsterRun.cs').read_text()
+        s=(ROOT/'Assets/DriveRoadster/Scripts/RoadsterRun.cs').read_text(encoding="utf-8")
         for fragment in ('a.z < 0f && b.z >= 0f','gateHalfWidths[nextGate]','gateHalfHeights[nextGate]', 'requiredModes[nextGate]', 'minimumInterval', 'nextGate == gates.Length', 'Vector3.Distance(current, previousPosition) > 15f'):
             self.assertIn(fragment,s)
-    def test_no_unity_success_claim(self):
-        s=(ROOT/'README.md').read_text()
-        self.assertIn('未実施', s); self.assertIn('ソースキット',s)
+    def test_validation_scope_is_explicit(self):
+        s=(ROOT/'README.md').read_text(encoding="utf-8")
+        for text in ('未検証', 'ClientSim', '複数クライアント', 'VRChat Build & Test'):
+            self.assertIn(text, s)
     def test_source_files(self):
         files=list((ROOT/'Assets/DriveRoadster/Scripts').glob('*.cs'))
         self.assertEqual(len(files),3)
         for p in files:
-            self.assertIn('UdonSharpBehaviour',p.read_text())
+            self.assertIn('UdonSharpBehaviour',p.read_text(encoding="utf-8"))
     def test_fbx_headers(self):
         files=list((ROOT/'Assets/DriveRoadster/Art').rglob('*.fbx'))
         self.assertGreaterEqual(len(files),2)

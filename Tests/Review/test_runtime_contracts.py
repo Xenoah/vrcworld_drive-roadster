@@ -4,8 +4,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / 'Assets/DriveRoadster/Scripts'
-VEHICLE = (SCRIPTS / 'RoadsterVehicle.cs').read_text()
-RUN = (SCRIPTS / 'RoadsterRun.cs').read_text()
+VEHICLE = (SCRIPTS / 'RoadsterVehicle.cs').read_text(encoding="utf-8")
+RUN = (SCRIPTS / 'RoadsterRun.cs').read_text(encoding="utf-8")
 
 class RuntimeContracts(unittest.TestCase):
     def test_initial_state_gate_exists(self):

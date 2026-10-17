@@ -8,7 +8,7 @@ VRChat向けのオリジナル電動スポーツカー走行ワールドの実�
 
 ## 現在の状態
 
-本READMEは初期設計資料の索引です。その後モデル・コース・UdonSharpソース・Editor builderを作成しました。最新状況はルートREADMEとIMPLEMENTATION_STATUS.ja.mdを参照。Unityビルド・VRChat実機・複数人同期・VR快適性は未検証です。
+本READMEは初期設計資料の索引です。その後モデル・コース・UdonSharpソース・Editor builderを作成しました。最新状況はルートREADMEとIMPLEMENTATION_STATUS.ja.mdを参照。Unity の C# / UdonSharp コンパイル、シーン構築、ClientSim の限定区間試験は実施済みです。[検証記録](validation/UNITY_VALIDATION.ja.md)を参照。VRChat Build & Test・実機・複数人同期・VR快適性は未検証です。
 
 想定リポジトリ名は `vrcworld_drive-roadster`。初期調査では対象が見つからず、その後ユーザー承認により公開リポジトリを新規作成しました。
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = (ROOT / 'Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs').read_text()
+SOURCE = (ROOT / 'Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs').read_text(encoding="utf-8")
 BUILD = SOURCE.split('public static void Build()', 1)[1].split('static void RemapVehicleMaterials', 1)[0]
 
 class BuilderScopeRegression(unittest.TestCase):

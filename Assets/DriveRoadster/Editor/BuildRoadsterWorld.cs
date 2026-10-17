@@ -6,6 +6,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using UdonSharpEditor;
+using UdonSharp;
+using UdonSharp.Compiler;
 using VRC.SDK3.Components;
 
 public static class BuildRoadsterWorld
@@ -26,12 +28,14 @@ public static class BuildRoadsterWorld
         CourseData data = JsonUtility.FromJson<CourseData>(File.ReadAllText(manifestPath));
         if (data.checkpoints == null || data.checkpoints.Length < 3) throw new InvalidDataException("At least three ordered checkpoints required");
         string vehiclePath = Root + "/Art/Vehicle/DR_Asterion_LOD0.fbx";
-        string coursePath = FindModel(Root + "/Art/Course");
-        if (vehiclePath == null || coursePath == null) throw new InvalidDataException("Vehicle and course FBX files are required; generate source assets first");
+        string coursePath = Root + "/Art/Course/VectorCoastal_Course.fbx";
+        if (!File.Exists(vehiclePath) || !File.Exists(coursePath)) throw new InvalidDataException("Vehicle and course FBX files are required; generate source assets first");
+        EnsureProgramAssets();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         GameObject world = new GameObject("DriveRoadsterWorld");
         GameObject course = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(coursePath));
         course.transform.SetParent(world.transform, false);
+        MatchManifestHandedness(course);
         foreach (Transform child in course.GetComponentsInChildren<Transform>(true))
         {
             if (!child.name.StartsWith("COL_")) continue;
@@ -44,6 +48,7 @@ public static class BuildRoadsterWorld
             Renderer renderer = child.GetComponent<Renderer>();
             if (renderer != null) renderer.enabled = false;
         }
+        if (course.GetComponentsInChildren<MeshCollider>().Length == 0) throw new InvalidDataException("Main course must contain COL_ collision meshes");
         Transform spawn = NewTransform("VehicleSpawn", world.transform, Vec(data.spawn.position), Orientation(data.spawn.forward, data.spawn.up));
         Transform playerSpawn = NewTransform("PlayerSpawn", world.transform, Vec(data.playerSpawn.position), Orientation(data.playerSpawn.forward, data.playerSpawn.up));
         var descriptor = world.AddComponent<VRCSceneDescriptor>();
@@ -60,7 +65,9 @@ public static class BuildRoadsterWorld
         BoxCollider chassis = car.AddComponent<BoxCollider>();
         chassis.center = new Vector3(0f, .62f, 0f); chassis.size = new Vector3(1.8f, .65f, 4.3f);
         GameObject model = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(vehiclePath));
+        PrefabUtility.UnpackPrefabInstance(model, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         model.transform.SetParent(car.transform, false);
+        MatchManifestHandedness(model);
         SetLayerRecursively(model, 17);
         RemapVehicleMaterials(model);
         GameObject[] lodModels = new GameObject[3]; lodModels[0] = model;
@@ -73,7 +80,8 @@ public static class BuildRoadsterWorld
                 GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(lodPath);
                 if (asset == null) throw new FileNotFoundException("Missing LOD", lodPath);
                 lodModels[level] = (GameObject)PrefabUtility.InstantiatePrefab(asset);
-                lodModels[level].transform.SetParent(car.transform, false); SetLayerRecursively(lodModels[level], 17); RemapVehicleMaterials(lodModels[level]);
+                PrefabUtility.UnpackPrefabInstance(lodModels[level], PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                lodModels[level].transform.SetParent(car.transform, false); MatchManifestHandedness(lodModels[level]); SetLayerRecursively(lodModels[level], 17); RemapVehicleMaterials(lodModels[level]);
             }
             lods[level] = new LOD(level == 0 ? .30f : level == 1 ? .10f : .015f, lodModels[level].GetComponentsInChildren<Renderer>());
         }
@@ -95,7 +103,17 @@ public static class BuildRoadsterWorld
         {
             vehicle.suspensionPoints[i] = NewTransform("Suspension_" + i, car.transform,
                 new Vector3(i % 2 == 0 ? -.88f : .88f, .60f, i < 2 ? 1.42f : -1.38f), Quaternion.identity);
-            for (int level = 0; level < 3; level++) vehicle.wheels[level * 4 + i] = FindChild(lodModels[level].transform, wheelNames[i]);
+            for (int level = 0; level < 3; level++)
+            {
+                Transform wheel = FindChild(lodModels[level].transform, wheelNames[i]);
+                if (wheel == null) throw new InvalidDataException("Missing wheel: " + wheelNames[i]);
+                // Imported FBX pivots use Blender axes. Keep a Unity-aligned animated parent.
+                Transform pivot = NewTransform("WheelPivot_LOD" + level + "_" + wheelNames[i], car.transform,
+                    car.transform.InverseTransformPoint(wheel.position), Quaternion.identity);
+                wheel.SetParent(pivot, true);
+                if (wheel.parent != pivot) throw new InvalidOperationException("Wheel pivot reparent failed");
+                vehicle.wheels[level * 4 + i] = pivot;
+            }
         }
         run.gates = new Transform[data.checkpoints.Length];
         run.gateHalfWidths = new float[run.gates.Length]; run.gateHalfHeights = new float[run.gates.Length]; run.requiredModes = new int[run.gates.Length];
@@ -118,7 +136,6 @@ public static class BuildRoadsterWorld
         CreateButton(car.transform, new Vector3(.10f, .85f, .50f), "RESTART", 0, vehicle, run);
         CreateButton(car.transform, new Vector3(.30f, .85f, .50f), "TIME ATTACK", 1, vehicle, run);
         CreateButton(car.transform, new Vector3(.50f, .85f, .50f), "EXIT", 2, vehicle, run);
-        vehicle.ApplyProxyModifications(); run.ApplyProxyModifications();
         var sun = new GameObject("Sun").AddComponent<Light>();
         sun.type = LightType.Directional; sun.intensity = 1.1f; sun.shadows = LightShadows.Soft;
         sun.transform.rotation = Quaternion.Euler(38, -35, 0);
@@ -128,6 +145,44 @@ public static class BuildRoadsterWorld
         if (!EditorSceneManager.SaveScene(scene, scenePath)) throw new IOException("Scene save failed");
         AssetDatabase.SaveAssets();
         Debug.Log("Roadster scene generated: " + scenePath + ". Compile UdonSharp and run SDK validation before Build & Test.");
+    }
+
+    static void MatchManifestHandedness(GameObject model)
+    {
+        // These FBX exports import with X reflected in Unity. The JSON uses X-right.
+        // Reflect only the imported art, leaving physics, seats and gate frames canonical.
+        Vector3 scale = model.transform.localScale;
+        scale.x = -scale.x;
+        model.transform.localScale = scale;
+    }
+
+    static void EnsureProgramAssets()
+    {
+        // AddUdonSharpComponent requires a compiled program asset even on a fresh clone.
+        string[] scriptNames = { "RoadsterVehicle", "RoadsterRun", "RoadsterAction" };
+        foreach (string scriptName in scriptNames)
+        {
+            string scriptPath = Root + "/Scripts/" + scriptName + ".cs";
+            MonoScript source = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
+            if (source == null) throw new FileNotFoundException("Missing UdonSharp source", scriptPath);
+            bool found = false;
+            foreach (string guid in AssetDatabase.FindAssets("t:UdonSharpProgramAsset"))
+            {
+                UdonSharpProgramAsset existing = AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(AssetDatabase.GUIDToAssetPath(guid));
+                if (existing != null && existing.sourceCsScript == source) { found = true; break; }
+            }
+            if (found) continue;
+            UdonSharpProgramAsset program = ScriptableObject.CreateInstance<UdonSharpProgramAsset>();
+            program.sourceCsScript = source;
+            program.ScriptVersion = UdonSharpProgramVersion.CurrentVersion;
+            AssetDatabase.CreateAsset(program, AssetDatabase.GenerateUniqueAssetPath(Root + "/Scripts/" + scriptName + ".asset"));
+        }
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        UdonSharpCompilerV1.CompileSync();
+        foreach (UdonSharpProgramAsset program in UdonSharpProgramAsset.GetAllUdonSharpPrograms())
+            if (program.sourceCsScript != null && AssetDatabase.GetAssetPath(program.sourceCsScript).StartsWith(Root + "/Scripts/") && program.GetRealProgram() == null)
+                throw new InvalidOperationException("Udon compilation failed: " + program.name);
     }
 
     static void RemapVehicleMaterials(GameObject model)
@@ -188,7 +243,7 @@ public static class BuildRoadsterWorld
         labelObject.transform.localPosition = position + new Vector3(0f, .06f, -.03f);
         TextMesh text = labelObject.AddComponent<TextMesh>(); text.text = label; text.fontSize = 28; text.characterSize = .012f; text.anchor = TextAnchor.MiddleCenter; text.color = Color.cyan;
         var script = button.AddUdonSharpComponent<RoadsterAction>();
-        script.vehicle = vehicle; script.run = run; script.action = action; script.ApplyProxyModifications();
+        script.vehicle = vehicle; script.run = run; script.action = action;
     }
     static Text CreateBoard(Transform parent, Vector3 position, string initial)
     {
@@ -208,11 +263,5 @@ public static class BuildRoadsterWorld
     static Transform FindChild(Transform root, string name)
     { foreach (Transform t in root.GetComponentsInChildren<Transform>(true)) if (t.name == name) return t; return null; }
     static void SetLayerRecursively(GameObject root, int layer) { foreach (Transform t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer; }
-    static string FindModel(string directory)
-    {
-        if (!Directory.Exists(directory)) return null;
-        string[] files = Directory.GetFiles(directory, "*.fbx", SearchOption.AllDirectories);
-        Array.Sort(files); return files.Length > 0 ? files[0].Replace('\\', '/') : null;
-    }
 }
 #endif
