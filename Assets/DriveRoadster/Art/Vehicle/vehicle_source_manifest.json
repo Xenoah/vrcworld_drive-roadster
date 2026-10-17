@@ -1,8 +1,8 @@
 {
-  "LOD0_triangles": 74782,
-  "LOD0_renderers": 31,
-  "LOD1_triangles": 28392,
-  "LOD2_triangles": 7108,
+  "LOD0_triangles": 73096,
+  "LOD0_renderers": 38,
+  "LOD1_triangles": 27738,
+  "LOD2_triangles": 6965,
   "materials": 9,
   "dimensions_design_m": {
     "length": 4.65,
@@ -22,7 +22,7 @@
     ],
     "Eye_Driver": [
       -0.395,
-      1.02,
+      1.08,
       -0.08
     ],
     "Exit_Driver": [

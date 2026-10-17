@@ -11,6 +11,7 @@ using UdonSharpEditor;
 using VRC.SDK3.ClientSim;
 using VRC.SDKBase;
 using VRC.Udon;
+using VRC.Udon.Common;
 
 // Editor-only, opt-in integration smoke test. Inputs/section starting poses are scripted.
 // Runs the real Udon VM in ClientSim; it is not a full lap or a network/VR test.
@@ -22,7 +23,7 @@ public static class RoadsterValidation
     [Serializable] public class CheckResult { public string name; public bool passed; public string detail; }
     [Serializable] public class Report
     {
-        public string utc, unity, sdk = "3.10.5", environment = "Unity Editor Play Mode / ClientSim / one local simulated player / scripted inputs and section placements";
+        public string utc, unity, sdk = "3.10.5", environment = "Unity Editor Play Mode / ClientSim / one local simulated player / scripted SDK input events and section placements";
         public string gpu, cpu;
         public List<CheckResult> checks = new List<CheckResult>();
         public List<string> captures = new List<string>();
@@ -33,6 +34,7 @@ public static class RoadsterValidation
     static Camera camera;
     static UnityEngine.UI.Text overlay;
     static int stage;
+    static int cockpitCameraMode;
     static float next;
     static bool scheduled;
     static Vector3 start;
@@ -93,7 +95,7 @@ public static class RoadsterValidation
                 gpu = SystemInfo.graphicsDeviceName, cpu = SystemInfo.processorType };
             errors.Clear(); Application.logMessageReceived += Log;
             Application.runInBackground = true;
-            stage = 0; particlePeak = 0; next = Time.time + 6f; scheduled = true;
+            stage = 0; cockpitCameraMode=0; particlePeak = 0; next = Time.time + 6f; scheduled = true;
         }
         if (state == PlayModeStateChange.EnteredEditMode)
         {
@@ -111,7 +113,16 @@ public static class RoadsterValidation
     static T V<T>(UdonBehaviour u, string name) { return (T)u.GetProgramVariable(name); }
     static void Event(UdonBehaviour u, string name) { u.SendCustomEvent(name); }
     static void Input(float throttle, float steering = 0f)
-    { vehicle.SetProgramVariable("throttle", throttle); vehicle.SetProgramVariable("steering", steering); }
+    {
+        UdonManager.Instance.RunInputAction(UdonManager.UDON_MOVE_VERTICAL,new UdonInputEventArgs(throttle,HandType.LEFT));
+        UdonManager.Instance.RunInputAction(UdonManager.UDON_MOVE_HORIZONTAL,new UdonInputEventArgs(steering,HandType.LEFT));
+    }
+    static UdonBehaviour Action(int code)
+    {
+        foreach(var u in body.GetComponentsInChildren<UdonBehaviour>())
+            if(u.programSource!=null && u.programSource.name=="RoadsterAction" && V<int>(u,"action")==code) return u;
+        throw new InvalidOperationException("Missing action "+code);
+    }
     static void Check(string name, bool passed, string detail)
     { report.checks.Add(new CheckResult { name = name, passed = passed, detail = detail }); Debug.Log("ROADSTER_CHECK " + name + " " + passed + " " + detail); }
     static string Pose()
@@ -150,6 +161,30 @@ public static class RoadsterValidation
                         camera.transform.position = body.position - body.transform.forward*6f + body.transform.right*6f + Vector3.up*1.6f;
                         camera.transform.LookAt(body.position + Vector3.up*.3f,Vector3.up);
                     }
+                }
+            }
+            if (camera!=null && body!=null && cockpitCameraMode>0)
+            {
+                camera.nearClipPlane=.015f;
+                camera.cullingMask=~((1<<19)|(1<<10)); // Exclude the local avatar, as a first-person view does.
+                if(cockpitCameraMode==1)
+                {
+                    var eye=V<Transform>(vehicle,"cockpitEye");
+                    camera.transform.SetParent(eye,false);camera.transform.localPosition=Vector3.zero;
+                    camera.transform.localRotation=Quaternion.Euler(20,12,0);camera.fieldOfView=74;
+                }
+                else if(cockpitCameraMode==2)
+                {
+                    var panel=body.transform.Find("DriverControls");
+                    camera.transform.SetParent(panel,false);camera.transform.localScale=Vector3.one;
+                    // World-space distance accounts for the canvas scale.
+                    camera.transform.localPosition=Vector3.back*(.50f/panel.lossyScale.z);
+                    camera.transform.localRotation=Quaternion.identity;camera.fieldOfView=44;
+                }
+                else
+                {
+                    camera.transform.SetParent(body.transform,false);camera.transform.localPosition=new Vector3(-2.7f,1.4f,-.35f);
+                    camera.transform.LookAt(body.transform.TransformPoint(new Vector3(-.7f,.9f,-.12f)),Vector3.up);camera.fieldOfView=60;
                 }
             }
             if (vehicle != null && body != null)
@@ -373,6 +408,85 @@ public static class RoadsterValidation
                     UnityEngine.Object.Destroy(flightLandingPad); next=Time.time+1f;
                     break;
                 case 27:
+                    testLabel="COCKPIT INPUT / SIMULATED OCCUPANCY BRANCH";
+                    var yokes=V<Transform[]>(vehicle,"yokes");
+                    var accelerators=V<Transform[]>(vehicle,"throttlePedals");
+                    var brakes=V<Transform[]>(vehicle,"brakePedals");
+                    Check("Cockpit moving parts wired across LODs",yokes.Length==3 && accelerators.Length==3 && brakes.Length==3 && yokes[0].childCount>0 && accelerators[0].childCount>0 && brakes[0].childCount>0,"3 yokes + 3 throttle pedals + 3 brake pedals");
+                    Check("Movement exit disabled with explicit escape",V<VRC.SDK3.Components.VRCStation>(vehicle,"station").disableStationExit,"mapped Jump and EXIT use ExitStation");
+                    vehicle.SetProgramVariable("driverId",99);Action(5).Interact();
+                    Check("Occupied boarding feedback",V<string>(vehicle,"controlFeedback").Contains("OCCUPIED") && !V<bool>(vehicle,"pendingSeat"),"simulated driverId=99; "+V<string>(vehicle,"controlFeedback"));
+                    vehicle.SetProgramVariable("driverId",-1);Action(5).Interact();next=Time.time+2f;
+                    break;
+                case 28:
+                    Check("Door control enters station",V<bool>(vehicle,"localSeated") && V<int>(vehicle,"driverId")==Networking.LocalPlayer.playerId,"RoadsterAction Interact -> vehicle -> station");
+                    ClientSimPlayerStationManager stationManager=null;
+                    foreach(var candidate in Resources.FindObjectsOfTypeAll<ClientSimPlayerStationManager>())
+                        if(candidate.InStation()) { stationManager=candidate;break; }
+                    if(stationManager==null)throw new InvalidOperationException("No active ClientSim station manager");
+                    bool canMove=stationManager.CanPlayerMove(1f);
+                    Check("Move axis does not unseat driver",!canMove && stationManager.InStation() && V<bool>(vehicle,"localSeated"),"ClientSim station movement path, axis=1");
+                    Input(.08f,.08f);next=Time.time+.3f;
+                    break;
+                case 29:
+                    Check("Input deadzone rejects drift",Mathf.Abs(V<float>(vehicle,"throttle"))<.001f && Mathf.Abs(V<float>(vehicle,"steering"))<.001f,"SDK InputMove callbacks at .08; deadzone=.12");
+                    // The ClientSim mannequin has no seated IK; exclude it only from the QA camera.
+                    // This does not move the real station/eye or modify the saved scene.
+                    foreach(var avatar in Resources.FindObjectsOfTypeAll<ClientSimPlayerAvatarManager>())
+                        if(avatar.gameObject.scene.IsValid()) foreach(var renderer in avatar.GetComponentsInChildren<Renderer>(true)) renderer.gameObject.layer=10;
+                    Input(1,.55f);cockpitCameraMode=1;testLabel="AUTHORED DRIVER EYE / SDK INPUT EVENTS / NOT HMD TRACKING";next=Time.time+.65f;
+                    break;
+                case 30:
+                    float speedRead;bool speedParsed=float.TryParse(V<UnityEngine.UI.Text>(run,"speedText").text,out speedRead);
+                    Check("Live speed and road mode instruments",speedParsed && Mathf.Abs(speedRead-body.velocity.magnitude*3.6f)<10 && V<UnityEngine.UI.Text>(run,"modeText").text=="ROAD","display="+speedRead+" km/h; physics="+(body.velocity.magnitude*3.6f).ToString("F2"));
+                    float yokeAngle=Quaternion.Angle(Quaternion.identity,V<Transform[]>(vehicle,"yokes")[0].localRotation);
+                    float pedalAngle=Quaternion.Angle(Quaternion.identity,V<Transform[]>(vehicle,"throttlePedals")[0].localRotation);
+                    Check("Yoke and throttle pedal follow input",yokeAngle>5 && pedalAngle>8,"yoke="+yokeAngle.ToString("F2")+"; pedal="+pedalAngle.ToString("F2"));
+                    Capture("clientsim-cockpit-driving");start=body.position;Action(0).Interact();
+                    Check("Moving reset requires confirmation",Vector3.Distance(body.position,start)<.1f && V<string>(vehicle,"controlFeedback").Contains("PRESS AGAIN"),V<string>(vehicle,"controlFeedback"));next=Time.time+.2f;
+                    break;
+                case 31:
+                    Action(0).Interact();
+                    Check("Confirmed reset clears inputs",body.velocity.magnitude<.01f && Mathf.Abs(V<float>(vehicle,"rawThrottle"))<.001f && Mathf.Abs(V<float>(vehicle,"rawSteering"))<.001f,"second Interact restores start box and neutral controls");
+                    Action(1).Interact();Input(1);next=Time.time+2.1f;
+                    break;
+                case 32:
+                    Check("Time attack panel starts real run",V<bool>(run,"running") && V<int>(run,"nextGate")==1 && V<UnityEngine.UI.Text>(run,"lapText").text.Contains("LAP 1 / 1"),V<UnityEngine.UI.Text>(run,"lapText").text);
+                    Event(vehicle,"Recover");Action(3).Interact();Action(3).Interact();Input(0,1);next=Time.time+.3f;
+                    break;
+                case 33:
+                    Check("Steering profile changes full-scale response",V<int>(vehicle,"sensitivityProfile")==0 && Mathf.Abs(V<float>(vehicle,"steering")-.65f)<.01f,"COMFORT full axis -> "+V<float>(vehicle,"steering").ToString("F3"));
+                    Action(3).Interact();Input(-1);next=Time.time+.3f;
+                    break;
+                case 34:
+                    float brakeAngle=Quaternion.Angle(Quaternion.identity,V<Transform[]>(vehicle,"brakePedals")[0].localRotation);
+                    Check("Brake pedal follows negative axis",brakeAngle>8 && V<UnityEngine.UI.Text>(run,"driveText").text.Contains("BRAKE"),"brake pedal="+brakeAngle.ToString("F2"));
+                    Place(new Vector3(180,20,120),Quaternion.Euler(12,180,24),new Vector3(0,-4,-25));Event(vehicle,"EnableFlight");Input(1,.1f);next=Time.time+.3f;
+                    break;
+                case 35:
+                    Check("Flight and thruster cockpit telemetry",V<UnityEngine.UI.Text>(run,"modeText").text=="FLIGHT" && V<UnityEngine.UI.Text>(run,"systemText").text.Contains("ACTIVE") && V<float[]>(vehicle,"thrusterDemand")[6]>.4f,V<UnityEngine.UI.Text>(run,"systemText").text);
+                    Capture("clientsim-cockpit-flight");next=Time.time+.3f;
+                    break;
+                case 36:
+                    Event(vehicle,"Recover");cockpitCameraMode=2;testLabel="LIVE CONTROLS PANEL / INTERACT BUTTONS / CLIENTSIM";Action(4).Interact();next=Time.time+.2f;
+                    break;
+                case 37:
+                    Check("Help control changes live panel",!V<bool>(vehicle,"showControlHelp") && V<UnityEngine.UI.Text>(run,"helpText").text.Contains("HELP H"),"help hidden via physical panel Interact");Action(4).Interact();next=Time.time+.2f;
+                    break;
+                case 38:
+                    Capture("clientsim-cockpit-controls");Input(1);next=Time.time+.5f;
+                    break;
+                case 39:
+                    UdonManager.Instance.RunInputAction(UdonManager.UDON_INPUT_JUMP,new UdonInputEventArgs(true,HandType.RIGHT));
+                    cockpitCameraMode=3;testLabel="DRIVER ACCESS / SAFE EXIT TO PADDOCK";next=Time.time+1f;
+                    break;
+                case 40:
+                    var safe=V<Transform>(vehicle,"safeExit");var playerPosition=Networking.LocalPlayer.GetPosition();
+                    Check("Mapped Jump exits safely to paddock",!V<bool>(vehicle,"localSeated") && V<int>(vehicle,"driverId")==-1 && Vector3.Distance(playerPosition,safe.position)<1.5f,"player="+playerPosition.ToString("F2")+"; exit="+safe.position.ToString("F2"));
+                    Check("Exit restores available boarding state",V<UnityEngine.UI.Text>(vehicle,"boardingDisplay").text.Contains("AVAILABLE") && body.velocity.magnitude<.01f,V<UnityEngine.UI.Text>(vehicle,"boardingDisplay").text);
+                    Capture("clientsim-cockpit-boarding");next=Time.time+.6f;
+                    break;
+                case 41:
                     int configuredBudget=0;
                     foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterJets")) configuredBudget+=ps.main.maxParticles;
                     foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterSmoke")) configuredBudget+=ps.main.maxParticles;

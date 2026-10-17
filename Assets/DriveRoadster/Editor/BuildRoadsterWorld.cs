@@ -90,7 +90,7 @@ public static class BuildRoadsterWorld
         Transform exit = NewTransform("SafeExit", world.transform, playerSpawn.position, playerSpawn.rotation);
         VRCStation station = car.AddComponent<VRCStation>();
         station.PlayerMobility = VRCStation.Mobility.ImmobilizeForVehicle;
-        station.seated = true; station.disableStationExit = false;
+        station.seated = true; station.disableStationExit = true;
         station.stationEnterPlayerLocation = seat;
         station.stationExitPlayerLocation = exit;
         RoadsterVehicle vehicle = car.AddUdonSharpComponent<RoadsterVehicle>();
@@ -129,18 +129,12 @@ public static class BuildRoadsterWorld
         run.flightStartGate = data.flightStartGate; run.flightEndGate = data.flightEndGate;
         run.display = CreateBoard(world.transform, playerSpawn.position + Vector3.up * 2f + playerSpawn.forward * 5f, "Drive Roadster");
         run.display.transform.parent.rotation = playerSpawn.rotation;
-        run.cockpitDisplay = CreateBoard(car.transform, car.transform.TransformPoint(new Vector3(-.4f, .86f, .60f)), "READY");
-        run.cockpitDisplay.transform.parent.localRotation = Quaternion.identity;
-        run.cockpitDisplay.transform.parent.localScale = Vector3.one * .00055f;
-        run.cockpitDisplay.rectTransform.sizeDelta = new Vector2(700, 220);
-        // In-cockpit buttons remain usable in VR; desktop R/T shortcuts are supplemental.
-        CreateButton(car.transform, new Vector3(.10f, .85f, .50f), "RESTART", 0, vehicle, run);
-        CreateButton(car.transform, new Vector3(.30f, .85f, .50f), "TIME ATTACK", 1, vehicle, run);
-        CreateButton(car.transform, new Vector3(.50f, .85f, .50f), "EXIT", 2, vehicle, run);
+        RoadsterCockpitSetup.Build(vehicle, run, lodModels);
         var sun = new GameObject("Sun").AddComponent<Light>();
         sun.type = LightType.Directional; sun.intensity = 1.1f; sun.shadows = LightShadows.Soft;
         sun.transform.rotation = Quaternion.Euler(38, -35, 0);
-        RenderSettings.ambientLight = new Color(.35f, .42f, .50f);
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(.50f, .56f, .63f);
         Directory.CreateDirectory(Root + "/Scenes");
         string scenePath = AssetDatabase.GenerateUniqueAssetPath(Root + "/Scenes/DriveRoadster.unity");
         if (!EditorSceneManager.SaveScene(scene, scenePath)) throw new IOException("Scene save failed");

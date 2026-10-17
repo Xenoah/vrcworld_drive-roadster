@@ -1,4 +1,4 @@
-import bpy, math, os, json, hashlib
+import bpy, math, os, json, hashlib, sys
 from mathutils import Vector
 from math import sin,cos,pi,sqrt
 ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
@@ -179,7 +179,7 @@ for s in [-1,1]:line('APillar',[(s*(.71-.105*t),-.77+.57*t,.79+.41*t) for t in [
 line('WindscreenHeader',[(-.605,-.20,1.20),(0,-.255,1.225),(.605,-.20,1.20)],.031,carbon)
 line('WindscreenFoot',[(-.71,-.77,.79),(0,-.825,.815),(.71,-.77,.79)],.021,carbon)
 # Closed geometric canopy based on observed current presentation. Original mesh.
-mesh('RoofPanel',[(-.605,-.20,1.20),(0,-.255,1.225),(.605,-.20,1.20),(-.62,.64,1.19),(0,.68,1.22),(.62,.64,1.19)],[(0,1,4,3),(1,2,5,4)],paint)
+mesh('RoofPanel',[(-.605,-.20,1.20),(0,-.255,1.225),(.605,-.20,1.20),(-.62,.64,1.19),(0,.68,1.22),(.62,.64,1.19)],[(0,1,4,3),(1,2,5,4)],carbon)
 mesh('RearCanopyGlass',[(-.62,.64,1.19),(.62,.64,1.19),(.75,1.24,.87),(-.75,1.24,.87)],[(0,1,2,3)],glass)
 for ss in [-1,1]:
  mesh('SideWindow',[(ss*.71,-.76,.80),(ss*.605,-.20,1.20),(ss*.62,.64,1.19),(ss*.75,.94,.83)],[(3,2,1,0)] if ss>0 else [(0,1,2,3)],glass)
@@ -188,24 +188,45 @@ for ss in [-1,1]:
  line('CanopyRearPillar',[(ss*.62,.64,1.19),(ss*.75,.94,.83)],.026,paint)
  line('WindowSill',[(ss*.71,-.76,.80),(ss*.75,.94,.83)],.023,carbon)
  mesh('CabinBeltSeal',[(ss*.71,-.76,.80),(ss*.75,.94,.83),(ss*.80,.94,.79),(ss*.80,-.76,.76)],[(0,1,2,3)],paint)
-# instrument cluster and console screen geometry + original graphic labels
-cube('DriverDisplayHousing',(-.395,-.65,.828),(.38,.075,.145),carbon,.025)
-cube('DriverDisplayGlass',(-.395,-.602,.83),(.34,.009,.111),glass,.008)
-cube('CenterScreen',(0,-.41,.71),(.36,.08,.25),carbon,.02)
-cube('CenterScreenFace',(0,-.35,.73),(.33,.012,.22),glass,.008)
-def textmesh(n,body,loc,size,rot,material):
- cu=bpy.data.curves.new(n,'FONT');cu.body=body;cu.size=size;cu.align_x='CENTER';cu.extrude=.0003;o=bpy.data.objects.new(n,cu);bpy.context.collection.objects.link(o);o.location=loc;o.rotation_euler=rot;bpy.context.view_layer.objects.active=o;o.select_set(True);bpy.ops.object.convert(target='MESH');o.select_set(False);finish(o,n,material)
-textmesh('DashSpeed','000',(-.395,-.593,.817),.052,(pi/2,0,pi),white)
-textmesh('DashMode','GROUND',(-.395,-.590,.792),.013,(pi/2,0,pi),cyan)
-textmesh('ConsoleTitle','ASTERION',(0,-.342,.78),.022,(pi/2,0,pi),white)
-textmesh('ConsoleFlight','FLIGHT\nASSIST',(0,-.341,.71),.019,(pi/2,0,pi),cyan)
-# steering wheel tilted toward driver, no avatar/physics steering claims
-steer=empty('SteeringWheel',(-.395,-.38,.76))
-line('SteeringYoke',[(-.55,-.38,.84),(-.56,-.38,.79),(-.54,-.38,.65),(-.25,-.38,.65),(-.23,-.38,.79),(-.24,-.38,.84)],.023,leather,steer)
-for a in [pi/2,pi,pi*3/2]:line('SteeringSpoke',[(-.395,-.38,.76),(-.395+.125*sin(a),-.38,.76+.125*cos(a))],.013,metal,steer)
-cube('SteeringHub',(-.395,-.371,.76),(.115,.06,.072),carbon,.025,steer)
-for x in [-.50,-.30]:cube('Pedal',(x,-.64,.34),(.075,.16,.025),metal,.008)
-for y in [.04,.25]:torus('ConsoleCupholder',(0,y,.612),.062,.008,metal,maj=32,minr=8)
+# Game-designed cockpit: open screen apertures are filled with live Unity UI.
+# No baked speed/mode labels; the runtime has the sole source of telemetry.
+cube('DriverDisplayHousing',(-.35,-.66,.94),(.61,.10,.22),carbon,.025)
+cube('AssistDisplayHousing',(.34,-.65,.94),(.57,.10,.22),carbon,.025)
+line('DisplayLowerTrim',[(-.67,-.594,.826),(-.04,-.594,.826),(.64,-.594,.826)],.006,metal)
+for x in [-.66,.65]:
+ cube('VentPocket',(x,-.55,.73),(.075,.12,.08),rubber,.012)
+ for z in [.707,.729,.751]:cube('VentBlade',(x,-.48,z),(.065,.013,.006),metal,.002)
+# Closed canopy headliner: inward-facing companion, not a see-through roof.
+mesh('CanopyHeadliner',[(-.59,-.19,1.179),(.59,-.19,1.179),(.60,.62,1.179),(-.60,.62,1.179)],[(3,2,1,0)],carbon)
+line('CabinRoofAccent',[(-.58,-.17,1.16),(-.60,.56,1.16)],.003,white)
+# Rounded rectangular yoke, independent animated parent retained in FBX/GLB.
+steer=empty('SteeringWheel',(-.395,-.34,.734))
+# Explicit ordered perimeter avoids crossing the yoke at corner transitions.
+pts=[]
+for cx,cz,start_a in [(-.265,.79,90),(-.265,.685,0),(-.525,.685,-90),(-.525,.79,180)]:
+ for k in range(9):
+  a=(start_a-k*90/8)*pi/180;pts.append((cx+.026*cos(a),-.34,cz+.026*sin(a)))
+pts.append(pts[0]);line('RoundedRectYoke',pts,.021,leather,steer)
+line('YokeCrossbar',[(-.54,-.34,.73),(-.395,-.34,.725),(-.25,-.34,.73)],.013,metal,steer)
+cube('YokeCenter',(-.395,-.326,.734),(.13,.045,.07),carbon,.019,steer)
+cube('YokeCenterInset',(-.395,-.299,.734),(.095,.008,.033),metal,.008,steer)
+for x in [-.51,-.28]:
+ cube('YokeDecorativeThumbKey',(x,-.316,.77),(.035,.018,.018),rubber,.005,steer)
+ cube('YokeDecorativeMarker',(x,-.304,.77),(.012,.003,.003),cyan,.001,steer)
+# Independent pedal hinges for visual input animation; no physical foot tracking.
+pedals=[]
+for name,x,w in [('Pedal_Throttle',-.29,.07),('Pedal_Brake',-.49,.105)]:
+ pivot=empty(name,(x,-.73,.29));pedals.append(pivot)
+ cube(name+'Arm',(x,-.67,.31),(.028,.16,.02),carbon,.006,pivot)
+ foot=cube(name+'Face',(x,-.64,.34),(w,.14,.025),metal,.008,pivot)
+ for yy in [-.69,-.655,-.62,-.585]:cube(name+'Grip',(x,yy,.356),(w*.85,.011,.004),rubber,.002,pivot)
+cube('FootwellMat',(-.40,-.40,.283),(.56,.58,.017),rubber,.018)
+for x in [-.62,-.54,-.46,-.38,-.30,-.22]:line('FootwellRib',[(x,-.15,.294),(x,-.65,.294)],.003,carbon)
+# Console base and decorative fasteners. Interactive panel geometry is generated in Unity.
+cube('ConsoleControlPlinth',(.14,-.12,.57),(.34,.45,.12),carbon,.035)
+for x in [.00,.28]:
+ for y in [-.28,.03]:cyl('ConsoleFastener',(x,y,.637),.009,.006,metal,verts=16)
+torus('ConsoleCupholder',(0,.29,.612),.062,.008,metal,maj=32,minr=8)
 # Independent wheel pivots; all mesh parts localised after creation.
 for label,x,y in [('FL',-.88,-1.42),('FR',.88,-1.42),('RL',-.88,1.38),('RR',.88,1.38)]:
  pivot=empty('Wheel_'+label,(x,y,.35)); wheelgroups[label]=pivot;s=1 if x>0 else -1
@@ -242,7 +263,7 @@ for o in parts:
  else:
   mw=o.matrix_world.copy();o.parent=root;o.matrix_world=mw
 # Mesh consolidation per moving group/material, resulting in modest renderer count.
-for par in [root,steer,aero]+list(wheelgroups.values()):
+for par in [root,steer,aero]+pedals+list(wheelgroups.values()):
  for m in [paint,carbon,rubber,metal,leather,glass,white,red,cyan]:
   obs=[o for o in list(bpy.context.scene.objects) if o.type=='MESH' and o.parent==par and o.data.materials[0]==m]
   if not obs:continue
@@ -252,8 +273,8 @@ for par in [root,steer,aero]+list(wheelgroups.values()):
   # eliminate inherited multi slots from join
   for p in o.data.polygons:p.material_index=0
   while len(o.data.materials)>1:o.data.materials.pop(index=len(o.data.materials)-1)
-for o in [steer,aero]+list(wheelgroups.values()):mw=o.matrix_world.copy();o.parent=root;o.matrix_world=mw
-anchors={'Seat_Driver':(-.395,.12,.53),'Seat_Passenger':(.395,.12,.53),'Eye_Driver':(-.395,.08,1.02),'Exit_Driver':(-1.4,.12,.1),'Thruster_Front_L':(-.96,-.91,.64),'Thruster_Front_R':(.96,-.91,.64),'Thruster_Down_FL':(-.69,-1.13,.18),'Thruster_Down_FR':(.69,-1.13,.18),'Thruster_Rear':(0,2.46,.48),'Thruster_Down_L':(-.78,2.14,.19),'Thruster_Down_R':(.78,2.14,.19),'CenterOfMass':(0,0,.45)}
+for o in [steer,aero]+pedals+list(wheelgroups.values()):mw=o.matrix_world.copy();o.parent=root;o.matrix_world=mw
+anchors={'Seat_Driver':(-.395,.12,.53),'Seat_Passenger':(.395,.12,.53),'Eye_Driver':(-.395,.08,1.08),'Exit_Driver':(-1.4,.12,.1),'Thruster_Front_L':(-.96,-.91,.64),'Thruster_Front_R':(.96,-.91,.64),'Thruster_Down_FL':(-.69,-1.13,.18),'Thruster_Down_FR':(.69,-1.13,.18),'Thruster_Rear':(0,2.46,.48),'Thruster_Down_L':(-.78,2.14,.19),'Thruster_Down_R':(.78,2.14,.19),'CenterOfMass':(0,0,.45)}
 for n,co in anchors.items():o=empty(n,co);o.parent=root
 # Exports contain only the vehicle, no lights, floor, camera or collider.
 def selectvehicle():
@@ -280,6 +301,12 @@ for lod,ratio in [(1,.38),(2,.095)]:
 coll=cube('UCX_DR_Asterion_Chassis',(0,0,.52),(1.74,4.22,.55),carbon,.08);coll.hide_render=True
 bpy.ops.object.select_all(action='DESELECT');coll.select_set(True);bpy.ops.export_scene.fbx(filepath=os.path.join(OUT,'DR_Asterion_Collider.fbx'),use_selection=True,axis_forward='-Z',axis_up='Y',object_types={'MESH'})
 coll.hide_set(True)
+stats['materials']=9;stats['dimensions_design_m']={'length':4.65,'width_body':1.98,'height':1.225};stats['unity_anchors']={n:[co[0],co[2],-co[1]] for n,co in anchors.items()};stats['validation']='Blender geometry/export/render only; Unity, VRChat and multiplayer untested.'
+with open(os.path.join(OUT,'vehicle_source_manifest.json'),'w') as f:json.dump(stats,f,indent=2)
+print('VEHICLE_STATS',stats)
+
+if '--export-only' in sys.argv:
+ print('VEHICLE_EXPORT_ONLY_COMPLETE');sys.exit(0)
 # studio renders
 floor=cube('StudioFloor',(0,0,-.055),(200,200,.1),mat('StudioSlate',(.035,.048,.065),.15,.5),0)
 world=bpy.context.scene.world;world.use_nodes=True;world.node_tree.nodes['Background'].inputs[0].default_value=(.12,.16,.23,1);world.node_tree.nodes['Background'].inputs[1].default_value=.45
@@ -293,6 +320,3 @@ for n,loc,target,lens in views:
  cam.location=loc;cam.rotation_euler=(Vector(target)-cam.location).to_track_quat('-Z','Y').to_euler();camd.lens=lens;camd.clip_start=.025;scene.render.filepath=os.path.join(SRC,'renders',n+'.png');bpy.ops.render.render(write_still=True)
 # review scene saved separately, editable master stays vehicle-only
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(SRC,'DR_Asterion_Review.blend'),compress=True)
-stats['materials']=9;stats['dimensions_design_m']={'length':4.65,'width_body':1.98,'height':1.225};stats['unity_anchors']={n:[co[0],co[2],-co[1]] for n,co in anchors.items()};stats['validation']='Blender geometry/export/render only; Unity, VRChat and multiplayer untested.'
-with open(os.path.join(OUT,'vehicle_source_manifest.json'),'w') as f:json.dump(stats,f,indent=2)
-print('VEHICLE_STATS',stats)

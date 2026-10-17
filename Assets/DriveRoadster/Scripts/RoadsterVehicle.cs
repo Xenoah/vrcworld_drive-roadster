@@ -16,6 +16,20 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public LayerMask roadMask = 1;
     public RoadsterRun run;
     public bool showDiagnostics;
+    public Transform[] yokes;
+    public Transform[] throttlePedals;
+    public Transform[] brakePedals;
+    public Transform cockpitEye;
+    public UnityEngine.UI.Text boardingDisplay;
+    public float inputDeadzone = .12f;
+    public int sensitivityProfile = 1; // 0 comfort, 1 normal, 2 direct (local preference)
+    public bool showControlHelp = true;
+    [HideInInspector] public string controlFeedback = "READY";
+    private float feedbackUntil;
+    private float recoverArmedUntil;
+    private float rawThrottle, rawSteering;
+    [UdonSynced] private int netControl;
+    [UdonSynced] private Vector3 netLandingTelemetry;
     [HideInInspector] public int lastSerializedBytes;
     [HideInInspector] public bool lastSerializationSucceeded;
     [HideInInspector] public int failedSerializations;
@@ -88,8 +102,13 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public override void Interact()
     {
         VRCPlayerApi local = Networking.LocalPlayer;
-        if (!Networking.IsNetworkSettled || (!Networking.IsOwner(gameObject) && !hasSnapshot)) return;
-        if (!Utilities.IsValid(local) || localSeated || pendingSeat || driverId >= 0) return;
+        if (!Networking.IsNetworkSettled || (!Networking.IsOwner(gameObject) && !hasSnapshot))
+        { SetFeedback("SYNCING / WAIT FOR VEHICLE"); return; }
+        if (!Utilities.IsValid(local)) return;
+        if (localSeated) { SetFeedback("YOU ARE DRIVING"); return; }
+        if (pendingSeat) { SetFeedback("REQUESTING CONTROL / PLEASE WAIT"); return; }
+        if (driverId >= 0) { SetFeedback("OCCUPIED / DRIVER " + driverId); return; }
+        SetFeedback("REQUESTING CONTROL / PLEASE WAIT");
         pendingSeat = true;
         seatRequestTime = Time.time;
         Networking.SetOwner(local, gameObject);
@@ -106,7 +125,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     {
         if (!pendingSeat) return;
         pendingSeat = false;
-        if (!Networking.IsOwner(gameObject) || driverId >= 0) return;
+        if (!Networking.IsOwner(gameObject) || driverId >= 0) { SetFeedback("SEAT TAKEN / TRY AGAIN"); return; }
         driverId = Networking.LocalPlayer.playerId;
         generation++;
         RequestSerialization();
@@ -125,7 +144,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject) || driverId != player.playerId)
         { station.ExitStation(player); return; }
         localSeated = true;
-        throttle = 0f; steering = 0f;
+        SetFeedback("CONTROL READY / JUMP OR EXIT TO PADDOCK");
+        ClearInput();
         SetAuthorityPhysics(true);
     }
 
@@ -133,7 +153,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
     {
         if (!player.isLocal) return;
         localSeated = false;
-        throttle = 0f; steering = 0f;
+        SetFeedback("SAFE EXIT / PADDOCK");
+        ClearInput();
         if (Networking.IsOwner(gameObject)) ReleaseVehicle();
         if (Utilities.IsValid(safeExit)) player.TeleportTo(safeExit.position, safeExit.rotation);
     }
@@ -170,6 +191,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     {
         if (!Networking.IsOwner(gameObject)) return;
         if (Utilities.IsValid(run)) run.CancelRun();
+        ClearInput(); recoverArmedUntil = 0;
         body.velocity = Vector3.zero; body.angularVelocity = Vector3.zero;
         body.position = spawn.position; body.rotation = spawn.rotation;
         surfaceUp = Vector3.up; flightAllowed = false; motionMode = driverId >= 0 ? 1 : 0;
@@ -197,13 +219,66 @@ public class RoadsterVehicle : UdonSharpBehaviour
             && driverId == Networking.LocalPlayer.playerId;
     }
 
-    public override void InputMoveVertical(float value, UdonInputEventArgs args) { throttle = value; }
-    public override void InputMoveHorizontal(float value, UdonInputEventArgs args) { steering = value; }
-    // Jump remains the standard Station escape. No forced camera manipulation.
+    public override void InputMoveVertical(float value, UdonInputEventArgs args) { if (IsLocalDriver()) rawThrottle = Mathf.Clamp(value,-1f,1f); }
+    public override void InputMoveHorizontal(float value, UdonInputEventArgs args) { if (IsLocalDriver()) rawSteering = Mathf.Clamp(value,-1f,1f); }
+    public override void InputJump(bool value, UdonInputEventArgs args) { if (value && localSeated) ExitVehicle(); }
+    // Disable the station's movement exit; mapped Jump and the explicit EXIT button always remain available.
+
+    private void ClearInput() { rawThrottle=0; rawSteering=0; throttle=0; steering=0; }
+    private float ShapeInput(float value)
+    {
+        float magnitude=Mathf.Abs(value);
+        if (magnitude<=inputDeadzone) return 0f;
+        return Mathf.Sign(value)*Mathf.Clamp01((magnitude-inputDeadzone)/Mathf.Max(.01f,1f-inputDeadzone));
+    }
+    private void UpdateDriverInput()
+    {
+        float axis=ShapeInput(rawSteering);
+        float gain=sensitivityProfile==0 ? .65f : sensitivityProfile==1 ? .85f : 1f;
+        float targetSteer=Mathf.Sign(axis)*Mathf.Pow(Mathf.Abs(axis),1.4f)*gain;
+        steering=Mathf.MoveTowards(steering,targetSteer,6f*Time.fixedDeltaTime);
+        float targetThrottle=ShapeInput(rawThrottle);
+        throttle=Mathf.MoveTowards(throttle,targetThrottle,(targetThrottle<0 ? 10f : 6f)*Time.fixedDeltaTime);
+    }
+    private void SetFeedback(string message) { controlFeedback=message; feedbackUntil=Time.time+5f; }
+    public void DriverOnlyFeedback() { SetFeedback("DRIVER ONLY / REQUEST THE SEAT FIRST"); }
+    public string GetControlMessage()
+    {
+        if (Time.time<feedbackUntil) return controlFeedback;
+        if (pendingSeat) return "REQUESTING CONTROL";
+        if (!IsLocalDriver()) return driverId>=0 ? "OCCUPIED / DRIVER " + driverId : "AVAILABLE / INTERACT AT DRIVER DOOR";
+        return "CONTROL READY / JUMP OR EXIT TO PADDOCK";
+    }
+    public void RequestRecover()
+    {
+        if (!IsLocalDriver()) { DriverOnlyFeedback(); return; }
+        if (body.velocity.magnitude>2f && Time.time>recoverArmedUntil)
+        { recoverArmedUntil=Time.time+2f; SetFeedback("RESET? PRESS AGAIN WITHIN 2s"); return; }
+        Recover(); SetFeedback("RESET COMPLETE / START BOX");
+    }
+    public void CycleSensitivity()
+    {
+        if (!IsLocalDriver()) { DriverOnlyFeedback(); return; }
+        sensitivityProfile=(sensitivityProfile+1)%3; SetFeedback("STEERING / " + GetProfileName());
+    }
+    public string GetProfileName() { return sensitivityProfile==0 ? "COMFORT" : sensitivityProfile==1 ? "NORMAL" : "DIRECT"; }
+    public void ToggleControlHelp() { showControlHelp=!showControlHelp; }
+    public float GetDisplaySteering() { return Networking.IsOwner(gameObject) ? steering : ((netControl & 255)-127)/127f; }
+    public float GetDisplayThrottle() { return Networking.IsOwner(gameObject) ? throttle : (((netControl>>8) & 255)-127)/127f; }
+    public Vector3 GetLandingTelemetry() { return Networking.IsOwner(gameObject) ? new Vector3(groundClearance,closingSpeed,landingAcceleration) : netLandingTelemetry; }
+    public bool HasFlightPermission() { return flightAllowed; }
+    private void AnimateCockpit()
+    {
+        float steer=GetDisplaySteering(), pedal=GetDisplayThrottle();
+        if (yokes!=null) for(int i=0;i<yokes.Length;i++) if(Utilities.IsValid(yokes[i])) yokes[i].localRotation=Quaternion.Euler(0,0,-steer*70f);
+        if (throttlePedals!=null) for(int i=0;i<throttlePedals.Length;i++) if(Utilities.IsValid(throttlePedals[i])) throttlePedals[i].localRotation=Quaternion.Euler(Mathf.Max(0,pedal)*18f,0,0);
+        if (brakePedals!=null) for(int i=0;i<brakePedals.Length;i++) if(Utilities.IsValid(brakePedals[i])) brakePedals[i].localRotation=Quaternion.Euler(Mathf.Max(0,-pedal)*18f,0,0);
+        if (Utilities.IsValid(boardingDisplay)) boardingDisplay.text="DRIVER ACCESS / "+(driverId>=0 ? "OCCUPIED" : "AVAILABLE")+"\n"+GetControlMessage()+"\nINTERACT / REQUEST SEAT";
+    }
 
     void Update()
     {
-        if (pendingSeat && Time.time - seatRequestTime > 3f) pendingSeat = false;
+        if (pendingSeat && Time.time - seatRequestTime > 3f) { pendingSeat = false; SetFeedback("REQUEST TIMED OUT / TRY AGAIN"); }
         if (!Networking.IsOwner(gameObject) && hasSnapshot)
         {
             float age = Time.time - snapshotTime;
@@ -211,18 +286,22 @@ public class RoadsterVehicle : UdonSharpBehaviour
             transform.position = Vector3.Lerp(transform.position, target, 1f - Mathf.Exp(-12f * Time.deltaTime));
             transform.rotation = Quaternion.Slerp(transform.rotation, netRotation, 1f - Mathf.Exp(-12f * Time.deltaTime));
         }
-        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.R)) Recover();
+        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.R)) RequestRecover();
         if (IsLocalDriver() && Input.GetKeyDown(KeyCode.T) && Utilities.IsValid(run)) run.BeginRun();
         if (Networking.IsOwner(gameObject) && Time.time >= nextSync)
         {
             nextSync = Time.time + (driverId >= 0 ? syncInterval : 1f);
             PublishSnapshot();
         }
+        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.X)) ExitVehicle();
+        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.C)) CycleSensitivity();
+        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.H)) ToggleControlHelp();
+        AnimateCockpit();
         UpdateThrusterVisuals();
         float speed = Networking.IsOwner(gameObject) ? body.velocity.magnitude : netVelocity.magnitude;
         wheelSpin += speed * Time.deltaTime * 163.7f;
         for (int i = 0; i < wheels.Length; i++)
-            if (Utilities.IsValid(wheels[i])) wheels[i].localRotation = Quaternion.Euler(wheelSpin, i % 4 < 2 ? steering * 22f : 0f, 0f);
+            if (Utilities.IsValid(wheels[i])) wheels[i].localRotation = Quaternion.Euler(wheelSpin, i % 4 < 2 ? GetDisplaySteering() * 22f : 0f, 0f);
     }
 
     void FixedUpdate()
@@ -234,6 +313,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
             for (int i = 0; i < 7; i++) thrusterDemand[i] = 0;
             return;
         }
+        UpdateDriverInput();
         for (int i = 0; i < 7; i++) thrusterDemand[i] = 0;
         attitudeCommand = Vector3.zero; landingAcceleration = 0;
         ProbeLandingSurface();
@@ -438,6 +518,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
     {
         netPosition = body.position; netRotation = body.rotation; netVelocity = body.velocity;
         PackThrust();
+        netControl=Mathf.RoundToInt(Mathf.Clamp(steering,-1,1)*127+127) | (Mathf.RoundToInt(Mathf.Clamp(throttle,-1,1)*127+127)<<8);
+        netLandingTelemetry=new Vector3(groundClearance,closingSpeed,landingAcceleration);
         RequestSerialization();
     }
 
@@ -446,6 +528,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) return;
         netPosition = body.position; netRotation = body.rotation; netVelocity = body.velocity;
         PackThrust();
+        netControl=Mathf.RoundToInt(Mathf.Clamp(steering,-1,1)*127+127) | (Mathf.RoundToInt(Mathf.Clamp(throttle,-1,1)*127+127)<<8);
+        netLandingTelemetry=new Vector3(groundClearance,closingSpeed,landingAcceleration);
     }
 
     public override void OnPostSerialization(SerializationResult result)

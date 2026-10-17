@@ -1,8 +1,8 @@
 {
-    "utc": "2026-10-17T07:43:14.9017487Z",
+    "utc": "2026-10-17T08:22:24.2493624Z",
     "unity": "2022.3.22f1",
     "sdk": "3.10.5",
-    "environment": "Unity Editor Play Mode / ClientSim / one local simulated player / scripted inputs and section placements",
+    "environment": "Unity Editor Play Mode / ClientSim / one local simulated player / scripted SDK input events and section placements",
     "gpu": "NVIDIA GeForce RTX 3070",
     "cpu": "AMD Ryzen 9 5950X 16-Core Processor ",
     "checks": [
@@ -44,7 +44,7 @@
         {
             "name": "Free drive acceleration",
             "passed": true,
-            "detail": "position=(0.000, -0.035, 39.651); speed=41.950; mode=1"
+            "detail": "position=(0.000, -0.035, 35.883); speed=40.413; mode=1"
         },
         {
             "name": "Time attack start gate",
@@ -59,12 +59,12 @@
         {
             "name": "Banked section contact",
             "passed": true,
-            "detail": "position=(102.597, 7.432, 339.146); speed=15.650; mode=2; modeMask=22; scripted placement at 72 degree bank"
+            "detail": "position=(102.004, 7.414, 339.210); speed=14.254; mode=2; modeMask=22; scripted placement at 72 degree bank"
         },
         {
             "name": "Free drive launch gate and assisted flight",
             "passed": true,
-            "detail": "position=(180.000, 17.792, 80.981); speed=52.124; mode=3; modeMask=26"
+            "detail": "position=(180.000, 17.843, 80.247); speed=52.223; mode=3; modeMask=26"
         },
         {
             "name": "Discontinuity invalidates run",
@@ -74,12 +74,12 @@
         {
             "name": "Nozzle demand follows correction moment",
             "passed": true,
-            "detail": "torque=(-1.205, 0.000, 2.284); down jets=0.02219623,0.3418884,0,0.1731685,0,5.960465E-09,0"
+            "detail": "torque=(-1.344, 0.000, 2.546); down jets=0.02474776,0.3811896,0,0.1930749,2.384186E-08,0,0"
         },
         {
             "name": "Nozzle exhaust follows body orientation",
             "passed": true,
-            "detail": "world downward angle=36.56"
+            "detail": "world downward angle=37.12"
         },
         {
             "name": "All seven exhaust directions oppose modeled force",
@@ -89,12 +89,12 @@
         {
             "name": "Air attitude error converges",
             "passed": true,
-            "detail": "initial=41.458; after 0.9 s=6.473"
+            "detail": "initial=41.458; after 0.9 s=6.855"
         },
         {
             "name": "Angular velocity damping",
             "passed": true,
-            "detail": "initial=1.972; after .45 s=0.195"
+            "detail": "initial=1.972; after .45 s=0.179"
         },
         {
             "name": "Unassisted control drop contacts road",
@@ -144,12 +144,97 @@
         {
             "name": "Assisted flight settles on temporary flat test pad",
             "passed": true,
-            "detail": "initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 122.180); speed=33.298; mode=1"
+            "detail": "initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 122.734); speed=33.282; mode=1"
+        },
+        {
+            "name": "Cockpit moving parts wired across LODs",
+            "passed": true,
+            "detail": "3 yokes + 3 throttle pedals + 3 brake pedals"
+        },
+        {
+            "name": "Movement exit disabled with explicit escape",
+            "passed": true,
+            "detail": "mapped Jump and EXIT use ExitStation"
+        },
+        {
+            "name": "Occupied boarding feedback",
+            "passed": true,
+            "detail": "simulated driverId=99; OCCUPIED / DRIVER 99"
+        },
+        {
+            "name": "Door control enters station",
+            "passed": true,
+            "detail": "RoadsterAction Interact -> vehicle -> station"
+        },
+        {
+            "name": "Move axis does not unseat driver",
+            "passed": true,
+            "detail": "ClientSim station movement path, axis=1"
+        },
+        {
+            "name": "Input deadzone rejects drift",
+            "passed": true,
+            "detail": "SDK InputMove callbacks at .08; deadzone=.12"
+        },
+        {
+            "name": "Live speed and road mode instruments",
+            "passed": true,
+            "detail": "display=37 km/h; physics=36.92"
+        },
+        {
+            "name": "Yoke and throttle pedal follow input",
+            "passed": true,
+            "detail": "yoke=21.83; pedal=18.00"
+        },
+        {
+            "name": "Moving reset requires confirmation",
+            "passed": true,
+            "detail": "RESET? PRESS AGAIN WITHIN 2s"
+        },
+        {
+            "name": "Confirmed reset clears inputs",
+            "passed": true,
+            "detail": "second Interact restores start box and neutral controls"
+        },
+        {
+            "name": "Time attack panel starts real run",
+            "passed": true,
+            "detail": "LAP 1 / 1   2.07 s\nCP 1 / 10    BEST --"
+        },
+        {
+            "name": "Steering profile changes full-scale response",
+            "passed": true,
+            "detail": "COMFORT full axis -> 0.650"
+        },
+        {
+            "name": "Brake pedal follows negative axis",
+            "passed": true,
+            "detail": "brake pedal=18.00"
+        },
+        {
+            "name": "Flight and thruster cockpit telemetry",
+            "passed": true,
+            "detail": "ATTITUDE HOLD  ACTIVE\nLANDING  ARMED"
+        },
+        {
+            "name": "Help control changes live panel",
+            "passed": true,
+            "detail": "help hidden via physical panel Interact"
+        },
+        {
+            "name": "Mapped Jump exits safely to paddock",
+            "passed": true,
+            "detail": "player=(48.00, 0.00, 6.00); exit=(48.00, 1.00, 6.00)"
+        },
+        {
+            "name": "Exit restores available boarding state",
+            "passed": true,
+            "detail": "DRIVER ACCESS / AVAILABLE\nSAFE EXIT / PADDOCK\nINTERACT / REQUEST SEAT"
         },
         {
             "name": "Particle budget respected",
             "passed": true,
-            "detail": "whole-run peak=480; configured cap=1280"
+            "detail": "whole-run peak=477; configured cap=1280"
         },
         {
             "name": "Station exit releases driver",
@@ -159,42 +244,62 @@
         {
             "name": "Capture clientsim-free-drive.png",
             "passed": true,
-            "detail": "230750 bytes"
+            "detail": "218894 bytes"
         },
         {
             "name": "Capture clientsim-time-attack.png",
             "passed": true,
-            "detail": "225874 bytes"
+            "detail": "219753 bytes"
         },
         {
             "name": "Capture clientsim-bank-section.png",
             "passed": true,
-            "detail": "328264 bytes"
+            "detail": "322197 bytes"
         },
         {
             "name": "Capture clientsim-assisted-flight.png",
             "passed": true,
-            "detail": "439763 bytes"
+            "detail": "440157 bytes"
         },
         {
             "name": "Capture clientsim-thruster-attitude.png",
             "passed": true,
-            "detail": "311595 bytes"
+            "detail": "290686 bytes"
         },
         {
             "name": "Capture clientsim-thruster-approach.png",
             "passed": true,
-            "detail": "272346 bytes"
+            "detail": "261419 bytes"
         },
         {
             "name": "Capture clientsim-thruster-touchdown.png",
             "passed": true,
-            "detail": "274023 bytes"
+            "detail": "262680 bytes"
         },
         {
             "name": "Capture clientsim-thruster-residual.png",
             "passed": true,
-            "detail": "295440 bytes"
+            "detail": "264602 bytes"
+        },
+        {
+            "name": "Capture clientsim-cockpit-driving.png",
+            "passed": true,
+            "detail": "509890 bytes"
+        },
+        {
+            "name": "Capture clientsim-cockpit-flight.png",
+            "passed": true,
+            "detail": "619177 bytes"
+        },
+        {
+            "name": "Capture clientsim-cockpit-controls.png",
+            "passed": true,
+            "detail": "439725 bytes"
+        },
+        {
+            "name": "Capture clientsim-cockpit-boarding.png",
+            "passed": true,
+            "detail": "336364 bytes"
         },
         {
             "name": "No runtime errors",
@@ -210,6 +315,10 @@
         "docs/images/clientsim-thruster-attitude.png",
         "docs/images/clientsim-thruster-approach.png",
         "docs/images/clientsim-thruster-touchdown.png",
-        "docs/images/clientsim-thruster-residual.png"
+        "docs/images/clientsim-thruster-residual.png",
+        "docs/images/clientsim-cockpit-driving.png",
+        "docs/images/clientsim-cockpit-flight.png",
+        "docs/images/clientsim-cockpit-controls.png",
+        "docs/images/clientsim-cockpit-boarding.png"
     ]
 }

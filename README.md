@@ -4,7 +4,7 @@
 
 ## 検証状態
 
-2026-10-17、Windows 上の **Unity 2022.3.22f1 / VRChat SDK 3.10.5** で C#・UdonSharp コンパイルとシーン構築を実施しました。**ClientSim の区間スモーク試験 39/39 項目成功**。乗降、直線加速、タイムアタックの START 通過、リセット、バンク接地、LAUNCH 通過からのアシスト飛行、不連続移動による失格、姿勢補助・3層白煙・着陸補助を確認しています。
+2026-10-17、Windows 上の **Unity 2022.3.22f1 / VRChat SDK 3.10.5** で C#・UdonSharp コンパイルとシーン構築を実施しました。**ClientSim の区間スモーク試験 60/60 項目成功**。乗降、直線加速、タイムアタックの START 通過、リセット、バンク接地、LAUNCH 通過からのアシスト飛行、不連続移動による失格、姿勢補助・3層白煙・着陸補助を確認しています。車内計器、ヨーク／ペダルの入力連動、操作パネル、感度切替、明示的な降車も SDK 入力イベントで検証しました。
 
 Python 静的・数理検査 33 件と C# 構文解析も成功。実行条件と生の検査値は [Unity 検証記録](docs/validation/UNITY_VALIDATION.ja.md) / [JSON](docs/validation/clientsim-smoke.json) を参照してください。
 
@@ -53,20 +53,44 @@ Unity Editor Play Mode / ClientSim。傾けて配置した車体の姿勢復元�
 
 補助オン／オフ比較は別の共通条件（高さ7 m、降下11 m/s、前進12 m/s）で行いました。実測値は [検証報告](docs/validation/UNITY_VALIDATION.ja.md) と [JSON](docs/validation/clientsim-smoke.json) に記載しています。地上での静止、横速度の維持、煙の寿命も確認しました。連続した全周走行・斜面を含む全着地条件・HMD・複数クライアントは未検証です。
 
+## 車内と操作系統
+
+灰白色シート、黒いダッシュボード、角丸長方形ヨーク、独立したアクセル／ブレーキペダル、計器の筐体とセンターコンソールを更新しました。銅色の閉じたキャノピーなど既存の外観を引き継ぎ、詳細な内装・計器配置はゲーム独自の設計です。編集可能な `.blend` と全3段階の FBX / GLB を同梱しています。
+
+![走行中の運転席計器](docs/images/clientsim-cockpit-driving.png)
+
+Unity Editor Play Mode / ClientSim。設計上の `CockpitEye_AuthoredReference` から撮影。実速度、ROAD モード、操作入力、CP／ラップ表示を描画しています。撮影用カメラでは ClientSim の仮アバターを非表示にしています。実アバターの着座視点や HMD トラッキングの検証画像ではありません。
+
+![飛行中の車内表示](docs/images/clientsim-cockpit-flight.png)
+
+同じ設計視点。空中に姿勢・初速を設定して飛行補助を有効にした区間試験。ピッチ／ロール、路面までの距離、接近速度、7系統の噴射要求を実状態から表示します。`INVALID` は直前の計測解除によるもので、完走画像ではありません。
+
+![車内操作パネル](docs/images/clientsim-cockpit-controls.png)
+
+同環境のパネル確認用カメラ。5個の Interact ボタンで TA 開始、リセット、操舵感度、ヘルプ、安全な退出を操作します。映像用の飾りスイッチと動作するボタンは [車内技術資料](docs/COCKPIT.ja.md) で区別しています。
+
+![運転席の乗車状態表示](docs/images/clientsim-cockpit-boarding.png)
+
+同環境。降車後の AVAILABLE 表示。ドア側の乗車操作から所有権要求・Station 着座へ進みます。
+
 ## 操作
 
 | 操作 | Desktop | VR |
 |---|---|---|
-| 乗車 | 車体を Interact | 車体を Interact |
+| 乗車 | 運転席ドアの DRIVER ACCESS または車体を Interact | 同じ場所を Interact |
 | 加速 | W / 移動入力の前 | 移動スティック縦の正方向 |
 | 制動・後退 | S / 移動入力の後 | 移動スティック縦の負方向 |
 | 操舵 | A / D | 移動スティック横 |
 | 飛行中の下降補助 | S | 移動スティック縦の負方向 |
-| スタートへ復帰 | R または RESTART | 車内 RESTART を Interact |
+| スタートへ復帰 | R または RESET | 車内 RESET を Interact |
 | タイムアタック開始 | T または TIME ATTACK | 車内 TIME ATTACK を Interact |
-| 降車 | 通常の Station 退出操作 / EXIT | 通常の Station 退出操作 / 車内 EXIT |
+| 操舵感度 | C または STEER | 車内 STEER を Interact |
+| 操作説明の表示 | H または CONTROLS | 車内 CONTROLS を Interact |
+| 降車 | Jump（標準 Space）/ X / EXIT | 割り当て済み Jump / 車内 EXIT |
 
-乗車は車体の所有権取得後に確定します。占有中の車への乗車要求は拒否します。車内ボタンの到達性、Desktop の実キー入力、VR コントローラーでの操作は受入試験が必要です。自動検証は Udon の入力値を設定するため、物理キーの割り当て検証を含みません。
+乗車は所有権取得後に確定し、占有中は理由を表示します。移動軸による Station 自動退出を無効にし、Jump／EXIT から明示的に降車します。降車先は常にパドックです。速度2 m/s超のリセットは2秒以内の二度押しが必要です。降車とリセットで入力をゼロにします。
+
+入力の遊びは .12。操舵はカーブ指数1.4、感度は COMFORT .65／NORMAL .85／DIRECT 1.0です。ヨークとペダルはこの入力に追従するアニメーションで、手でつかむ操作や足のトラッキングは実装していません。車内ボタンの実際の狙いやすさ、物理キー、VRコントローラー、各アバターの着座は受入試験が必要です。自動検証は SDK 入力イベントと Udon Interact を実行します。
 
 フリー走行は着座してそのまま加速します。飛行は **LAUNCH ゲートを正方向に通過したときだけ** 許可され、LANDING ゲートで解除されます。空中の任意位置から飛び始める機能ではありません。
 
@@ -92,8 +116,9 @@ Unity Editor Play Mode / ClientSim。傾けて配置した車体の姿勢復元�
 |---|---|
 | `Assets/DriveRoadster/Scripts/RoadsterVehicle.cs` | 乗降、所有権、車両物理、入力、スナップショット同期 |
 | `Assets/DriveRoadster/Scripts/RoadsterRun.cs` | ゲート判定、タイマー、失格、参考記録、HUD |
-| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | RESTART / TIME ATTACK / EXIT の Interact |
+| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | 乗車と5種の車内 Interact、押下演出 |
 | `Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs` | FBX と manifest からシーン・座席・HUD・LOD を生成 |
+| `Assets/DriveRoadster/Editor/RoadsterCockpitSetup.cs` | 生計器、ボタン、乗車表示、可動部ピボットを生成 |
 | `Assets/DriveRoadster/Editor/RoadsterThrusterSetup.cs` | ノズル参照と3層のParticleSystem・白煙材質を生成 |
 | `Assets/DriveRoadster/Editor/RoadsterValidation.cs` | Editor 限定 ClientSim 検証。ワールド実行コードには含まれない |
 | `Assets/DriveRoadster/Art/Vehicle/` | 車両 LOD0–2 の FBX / GLB、材質テクスチャ、幾何統計 |
@@ -121,7 +146,7 @@ Unity Editor Play Mode / ClientSim。傾けて配置した車体の姿勢復元�
 | 押し付け | 地上 9.81、壁 23 m/s²。横滑り速度へ減衰係数 6 |
 | 飛行 | 許可区間で非接地が .12 秒超。前進加速 8～18 m/s²、速度 28 m/s まで揚力増加 |
 | 飛行上限 | 世界 Y=100 m 超で揚力 0。自動重力は無効、各モードで重力相当を明示適用 |
-| 復帰条件 | Y < −20 m または原点から 1,800 m 超。R / RESTART でも復帰 |
+| 復帰条件 | Y < −20 m または原点から 1,800 m 超。R / RESET でも復帰 |
 
 飛行許可範囲は中心 `(180,20,78)`、サイズ `(60,80,180)` m の軸平行ボックスです。範囲外へ出ると飛行許可を解除し、計測中なら失格になります。飛行の上下入力は下降補助のみで、自由な 6 軸飛行ではありません。
 
@@ -131,12 +156,12 @@ Unity Editor Play Mode / ClientSim。傾けて配置した車体の姿勢復元�
 
 - **owner だけが物理を計算**。非 owner の Rigidbody は kinematic で、受信位置・姿勢を補間します。owner の CCD は ContinuousDynamic、非 owner は ContinuousSpeculative です。
 - Vehicle と Run は同一 GameObject 上の Manual 同期です。`VRCObjectSync` は併用しません。運転中は .12 秒、無人時は 1 秒ごとに送信を要求します。これは要求周期であり、実送信間隔や帯域の保証ではありません。
-- 車両は driver ID、世代、モード、位置・回転・速度、reset sequence と7ノズルの噴射強度（2 intへ量子化）を同期。受信側は速度から最大 .18 秒先まで外挿し、指数補間を適用します。最初の受信と reset sequence 変更時は即座に位置を合わせます。
+- 車両は driver ID、世代、モード、位置・回転・速度、reset sequence、7ノズルの噴射強度（2 int）、操舵／ペダル（1 int）、着陸テレメトリー（Vector3）を同期。受信側は速度から最大 .18 秒先まで外挿し、指数補間を適用します。最初の受信と reset sequence 変更時は即座に位置を合わせます。
 - 乗車前に `IsNetworkSettled` を確認し、非 owner は初回スナップショットも待ちます。所有権要求後 .4 秒待ち、自分が owner かつ空席なら Station へ入ります。2 秒後も着座していなければ解放します。
 - owner を失った運転者は退出します。通常降車・driver の切断・無人時の自動所有権移譲では旧 run を取り消し、スタートへ復帰します。安全な退出先はパドック側の player spawn です。
 - .4 秒の待機は合意プロトコルではありません。同時乗車、遅延、途中参加、切断、所有権移譲のイベント順は **複数クライアント未検証** です。
 
-車輪の回転は速度に基づくローカル演出で、各 Transform を同期しません。steering 値も同期していないため、遠隔側の前輪操舵角は現状再現されません。遠隔 HUD の速度は受信 `netVelocity` を使用します。`showDiagnostics` で送信 byte 数・成功/失敗数・世代を表示できますが、ClientSim の結果を実ネットワーク帯域として扱わないでください。
+車輪の回転は速度に基づくローカル演出です。操舵／ペダル入力を量子化して送り、遠隔側の前輪、ヨーク、ペダルを同じ値で動かします。各 Transform の個別同期は行いません。この遠隔表示は複数クライアント未検証です。遠隔 HUD の速度は受信 `netVelocity` を使用します。`showDiagnostics` で送信 byte 数・成功/失敗数・世代を表示できますが、ClientSim の結果を実ネットワーク帯域として扱わないでください。
 
 ## チェックポイントと記録
 
@@ -161,13 +186,13 @@ Unity Editor Play Mode / ClientSim。傾けて配置した車体の姿勢復元�
 
 ## LOD と描画
 
-| 車両 | 三角形数（Blender 出力統計） | LODGroup の画面占有率しきい値 |
+| 車両 | 三角形数（Blender GLB再インポート） | LODGroup の画面占有率しきい値 |
 |---|---:|---:|
-| LOD0 | 74,782 | .30 |
-| LOD1 | 28,392 | .10 |
-| LOD2 | 7,100 | .015（それ未満はカリング） |
+| LOD0 | 73,096 | .30 |
+| LOD1 | 27,738 | .10 |
+| LOD2 | 6,957 | .015（それ未満はカリング） |
 
-各段 31 Renderer・9 材質です。車輪参照は 4 輪 × 3 段を接続します。しきい値は距離そのものではなくスクリーン上の相対サイズです。材質は Unity Standard へ割り当て、金属・カーボン・透明ガラス・発光部をビルダーで設定します。
+各段 38 Renderer・9 材質です。車輪参照は 4 輪 × 3 段を接続します。しきい値は距離そのものではなくスクリーン上の相対サイズです。材質は Unity Standard へ割り当て、金属・カーボン・透明ガラス・発光部をビルダーで設定します。
 
 コースの manifest 統計は描画 38,144 三角形、衝突 1,826 三角形です。コースには見た目用 LOD 資産もありますが、現ビルダーは 1 つのコース FBX を採用し、コース用 LODGroup は組みません。FBX の X 軸反転はビルダーで補正し、車輪は Unity 軸の親ピボットで回します。描画負荷の計測と車両 LOD の遷移品質は別途確認が必要です。
 
@@ -198,7 +223,7 @@ Windows の大文字小文字を区別しないファイルシステムでは `t
 
 Tesla とは無関係のファン制作・研究用オリジナルモデルです。公式 3D モデルや画像テクスチャの抽出・再配布は行っていません。飛行・壁走り、コース寸法はゲームの創作仕様です。
 
-以下は **Blender で制作した外観確認用レンダー** です。Unity Play Mode / VRChat の実行画像とは区別しています。
+以下は **車内更新前に Blender で制作した外観確認用レンダー** です。現在の車内計器や可動部を示す画像ではありません。Unity Play Mode / VRChat の実行画像とは区別しています。
 
 ![Blender 車両外観レンダー](SourceAssets/Vehicle/renders/01_hero.png)
 

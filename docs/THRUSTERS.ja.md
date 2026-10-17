@@ -71,7 +71,7 @@
 
 ## 検証と画像
 
-Unity 2022.3.22f1 / VRChat SDK 3.10.5、Windows、RTX 3070、ClientSim の simulated player 1人で、Udon VM と PhysX を実行しました。内部入力の設定と途中配置を使う自動区間試験です。実キーボード・VR操作や一周完走の試験ではありません。
+Unity 2022.3.22f1 / VRChat SDK 3.10.5、Windows、RTX 3070、ClientSim の simulated player 1人で、Udon VM と PhysX を実行しました。SDK入力イベントの自動送信と途中配置を使う区間試験です。姿勢／着陸のA/B試験では補助の有効値や初期姿勢をハーネスから設定します。実キーボード・VR操作や一周完走の試験ではありません。
 
 最終実測値と成功数は [Unity検証報告](validation/UNITY_VALIDATION.ja.md) および [実行JSON](validation/clientsim-smoke.json) を参照してください。補助オン／オフの比較条件は高さ7 m、初期降下速度11 m/s、前進速度12 m/sで共通です。画像用の追加降下は前進速度0です。別途、飛行許可範囲内にPlay Mode限定の平面テスト台を置き、高度3 m・降下2 m/s・前進28 m/sからmode 3を経由して接地する回帰試験も実施しました。このテスト台は保存シーンに含めず、画像は元コースで撮影しています。
 
