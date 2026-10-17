@@ -1,0 +1,75 @@
+{
+  "LOD0_triangles": 74782,
+  "LOD0_renderers": 31,
+  "LOD1_triangles": 28392,
+  "LOD2_triangles": 7108,
+  "materials": 9,
+  "dimensions_design_m": {
+    "length": 4.65,
+    "width_body": 1.98,
+    "height": 1.225
+  },
+  "unity_anchors": {
+    "Seat_Driver": [
+      -0.395,
+      0.53,
+      -0.12
+    ],
+    "Seat_Passenger": [
+      0.395,
+      0.53,
+      -0.12
+    ],
+    "Eye_Driver": [
+      -0.395,
+      1.02,
+      -0.08
+    ],
+    "Exit_Driver": [
+      -1.4,
+      0.1,
+      -0.12
+    ],
+    "Thruster_Front_L": [
+      -0.96,
+      0.64,
+      0.91
+    ],
+    "Thruster_Front_R": [
+      0.96,
+      0.64,
+      0.91
+    ],
+    "Thruster_Down_FL": [
+      -0.69,
+      0.18,
+      1.13
+    ],
+    "Thruster_Down_FR": [
+      0.69,
+      0.18,
+      1.13
+    ],
+    "Thruster_Rear": [
+      0,
+      0.48,
+      -2.46
+    ],
+    "Thruster_Down_L": [
+      -0.78,
+      0.19,
+      -2.14
+    ],
+    "Thruster_Down_R": [
+      0.78,
+      0.19,
+      -2.14
+    ],
+    "CenterOfMass": [
+      0,
+      0.45,
+      0
+    ]
+  },
+  "validation": "Blender geometry/export/render only; Unity, VRChat and multiplayer untested."
+}

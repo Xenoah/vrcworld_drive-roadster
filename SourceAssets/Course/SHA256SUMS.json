@@ -1,0 +1,77 @@
+[
+  {
+    "path": "Assets/DriveRoadster/Art/Course/VectorCoastal_Course.fbx",
+    "bytes": 847532,
+    "sha256": "3ba5553eda099e3c51441c8579f2431b3a5d90f67c06754f314770e2c8f5bfb6"
+  },
+  {
+    "path": "Assets/DriveRoadster/Art/Course/VectorCoastal_Course.glb",
+    "bytes": 2327912,
+    "sha256": "50fcae874e34b3ebeed17d552e72f69984cc630c1bbfaac565c67591f093a8c2"
+  },
+  {
+    "path": "Assets/DriveRoadster/Art/Course/VectorCoastal_Course_LOD1_VisualOnly.fbx",
+    "bytes": 457692,
+    "sha256": "651ae5f0c428b2471b0f9cbde2e9a6f63050b2ae300ca1eb8c4923172f5f5af7"
+  },
+  {
+    "path": "Assets/DriveRoadster/Art/Course/VectorCoastal_Course_LOD1_VisualOnly.glb",
+    "bytes": 1024276,
+    "sha256": "c7531227d41d64bed66137dd5fe9c02a4801eae129db2d99cdaa5df74a82dc0b"
+  },
+  {
+    "path": "Assets/DriveRoadster/Art/Course/course_manifest.json",
+    "bytes": 9443,
+    "sha256": "a4ee359b748d11d8d32d499b032df4dfb21bb4ffc8f6bfce4ed15acd399bd31d"
+  },
+  {
+    "path": "Assets/DriveRoadster/Art/Course/lod_statistics.json",
+    "bytes": 866,
+    "sha256": "c20025ba87edac1aba860d008300b5dcde264f47f13cc161c47e36d7a3ebd574"
+  },
+  {
+    "path": "SourceAssets/Course/README.ja.md",
+    "bytes": 7720,
+    "sha256": "a47656779fc3e2d211782584339c4263b1cedb2e8e9b772b38e42d4bc32e81d3"
+  },
+  {
+    "path": "SourceAssets/Course/VectorCoastal_Course.blend",
+    "bytes": 684848,
+    "sha256": "ce9fab35260d0f4a55001d2da96fd0eb58af80cf54acd0f157d6daf1a0693d94"
+  },
+  {
+    "path": "SourceAssets/Course/build_course.py",
+    "bytes": 19376,
+    "sha256": "b673e56263b38d65313371a3a48a7f186b9c40b5c2d76ce35c99961315a7f260"
+  },
+  {
+    "path": "SourceAssets/Course/build_lod.py",
+    "bytes": 1306,
+    "sha256": "0ea37d8936b5fd0d6969da4776f66f95f216d402365aff2dd4f53611733eb932"
+  },
+  {
+    "path": "SourceAssets/Course/geometry_validation.json",
+    "bytes": 1049,
+    "sha256": "a0e8cde6c81b206974de89815cf76b1baf24aa4361ed9ac09ede89d8798ac273"
+  },
+  {
+    "path": "SourceAssets/Course/render_qa.py",
+    "bytes": 385,
+    "sha256": "cb2a282f26daa5bf6ba3a6678db86d30ef84ff80cfbf2c36972a1675932423ee"
+  },
+  {
+    "path": "SourceAssets/Course/surface_validation.json",
+    "bytes": 1250,
+    "sha256": "e7a6941e792190f3c7efdc6652333ae5747de1e0e2f7ffa0dd9bf7e9e70e2349"
+  },
+  {
+    "path": "SourceAssets/Course/validate_blend.py",
+    "bytes": 1499,
+    "sha256": "7df77760bae1543df8c20e97e799ab83a8d3c12f480702dfd63de6d5c73cab1d"
+  },
+  {
+    "path": "SourceAssets/Course/validate_course.py",
+    "bytes": 1754,
+    "sha256": "ac4aa58e0d15982c1be10d686ec88cb78973d76065a0b94332e911c0e31c1444"
+  }
+]

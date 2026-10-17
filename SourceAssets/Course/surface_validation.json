@@ -1,0 +1,60 @@
+{
+  "surface_seams": [
+    {
+      "from": "COL_Ground_Acceleration",
+      "to": "COL_WallRide_WallArc",
+      "max_gap_metres": 0.0
+    },
+    {
+      "from": "COL_WallRide_WallArc",
+      "to": "COL_Ground_Launch",
+      "max_gap_metres": 0.0
+    },
+    {
+      "from": "COL_Landing_Landing",
+      "to": "COL_Ground_ReturnArc",
+      "max_gap_metres": 0.0
+    },
+    {
+      "from": "COL_Ground_ReturnArc",
+      "to": "COL_Ground_Acceleration",
+      "max_gap_metres": 0.0
+    }
+  ],
+  "all_solid_seams_under_0_1mm": true,
+  "world_up_normal_dot_ranges": {
+    "COL_Ground_Acceleration": [
+      1.0,
+      1.0
+    ],
+    "COL_WallRide_WallArc": [
+      0.30918821692466736,
+      0.999998152256012
+    ],
+    "COL_Ground_Launch": [
+      0.9809561967849731,
+      0.9999979734420776
+    ],
+    "COL_Landing_Landing": [
+      1.0,
+      1.0
+    ],
+    "COL_Ground_ReturnArc": [
+      0.9999999403953552,
+      1.0
+    ],
+    "COL_WallRide_CeilingLab": [
+      -1.0,
+      0.999999463558197
+    ],
+    "COL_WallRide_VerticalCurl": [
+      -0.5664005279541016,
+      1.0
+    ]
+  },
+  "ceiling_inverted_face_present": true,
+  "wall_faces_up": true,
+  "ground_faces_up": true,
+  "vertical_curl_top_overhang": true,
+  "flight_gap_intentional": true
+}

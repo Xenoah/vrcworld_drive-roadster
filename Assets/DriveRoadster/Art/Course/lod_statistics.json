@@ -1,0 +1,38 @@
+{
+  "triangles": 15978,
+  "objects": [
+    {
+      "name": "VIS_LOD1_Roadster_Deck_Ceramic",
+      "triangles": 2390
+    },
+    {
+      "name": "VIS_LOD1_Roadster_Porcelain",
+      "triangles": 6115
+    },
+    {
+      "name": "VIS_LOD1_Roadster_Guidance_Cyan",
+      "triangles": 2799
+    },
+    {
+      "name": "VIS_LOD1_Roadster_Structure",
+      "triangles": 2934
+    },
+    {
+      "name": "VIS_LOD1_Roadster_Ramp_Red",
+      "triangles": 1106
+    },
+    {
+      "name": "VIS_LOD1_Roadster_Basalt",
+      "triangles": 400
+    },
+    {
+      "name": "VIS_LOD1_Roadster_Ocean",
+      "triangles": 12
+    },
+    {
+      "name": "VIS_LOD1_Roadster_Warning_Amber",
+      "triangles": 222
+    }
+  ],
+  "usage": "Optional far-distance visual replacement only. Never add duplicate collision. Road deck remains full-resolution. Unity screen-size threshold unvalidated."
+}

@@ -6,7 +6,7 @@
 
 **Unityコンパイル、UdonSharp変換、ClientSim、VRChat Build & Test、実機VR、複数クライアント試験は未実施です。完成・公開済みワールドではありません。**
 
-クラウドのBlender 4.3.2で車両/コース原本とFBX/GLBを生成し、Unity Editor用シーンビルダーとUdonSharpソースを作成しています。この環境にUnity Editorがないため、Unity用ソースキットとして渡します。外観は公式映像との比較・調整中です。
+クラウドのBlender 4.3.2で車両/コース原本とFBX/GLBを生成し、Unity Editor用シーンビルダーとUdonSharpソースを作成しています。この環境にUnity Editorがないため、Unity用ソースキットとして渡します。外観は公式映像を観察した銀色の試作モデルです。前面の継ぎ目など細部の仕上げと、Unityでの表示調整が残っています。
 
 - 所有者だけの車両物理とManualスナップショット同期
 - Station乗降、所有権喪失時退出、切断時復帰
@@ -32,7 +32,7 @@
 - 車両へInteractで乗車。運転権取得後に着座
 - W/Sまたは移動スティック縦: 加速/制動・後退。飛行中Sで下降補助
 - A/Dまたは移動スティック横: 操舵
-- R: 車両復帰。T: ピットで停止してタイムアタック開始
+- R: 車両復帰。T: スタート待機位置で停止してタイムアタック開始
 - VRは車内のRESTART / TIME ATTACK / EXIT操作部を利用
 - 通常Station退出も維持。視点の強制ロール/揺れ演出は追加しない
 
@@ -44,9 +44,19 @@
 - `Assets/DriveRoadster/Art/`: Unity用FBXと交換用GLB
 - `Assets/DriveRoadster/Scripts/`: UdonSharpランタイム
 - `Assets/DriveRoadster/Editor/`: シーン組立
+- [実装・検証状態](docs/IMPLEMENTATION_STATUS.ja.md)
 - [ワールド設計](docs/WORLD_DESIGN.ja.md)
+- [映像観察と創作の区別](docs/VISUAL_REFERENCES.ja.md)
 - [公式資料](docs/REFERENCES.ja.md)
 - [Unity引き継ぎ](docs/UNITY_HANDOFF.ja.md)
 - [保全とcheckpoint](docs/CHECKPOINTS.ja.md)
 
 Teslaとは無関係のファン制作・研究用オリジナルモデルです。公式の3Dモデルや画像テクスチャを抽出・再配布しません。飛行・壁走りは本ゲームの創作仕様で、実車性能を保証するものではありません。
+
+## 現行試作のプレビュー
+
+以下は独自制作モデルのBlenderレンダーです。VRChat実機のスクリーンショットではありません。
+
+![車両の試作](SourceAssets/Vehicle/renders/01_hero.png)
+
+![縦カール練習ランプ](SourceAssets/Course/preview_vertical_curl.png)

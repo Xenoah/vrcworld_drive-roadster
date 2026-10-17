@@ -1,0 +1,599 @@
+{
+  "schema": 1,
+  "course_id": "vector_coastal_01",
+  "version": "0.1.0",
+  "units": "metres",
+  "coordinates": "Unity X-right Y-up Z-forward; Blender (x,-z,y)",
+  "spawn": {
+    "position": [
+      0,
+      0.1,
+      -12
+    ],
+    "forward": [
+      0,
+      0,
+      1
+    ],
+    "up": [
+      0,
+      1,
+      0
+    ]
+  },
+  "playerSpawn": {
+    "position": [
+      48,
+      1,
+      6
+    ],
+    "forward": [
+      -1,
+      0,
+      0
+    ],
+    "up": [
+      0,
+      1,
+      0
+    ]
+  },
+  "flightStartGate": 3,
+  "flightEndGate": 7,
+  "start_position": [
+    0,
+    0.1,
+    0
+  ],
+  "start_forward": [
+    0,
+    0,
+    1
+  ],
+  "checkpoints": [
+    {
+      "index": 0,
+      "name": "START",
+      "position": [
+        0,
+        2,
+        0
+      ],
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 22,
+      "height": 8,
+      "depth": 12,
+      "required_mode": "Ground"
+    },
+    {
+      "index": 1,
+      "name": "ACCEL",
+      "position": [
+        0,
+        2,
+        180
+      ],
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 22,
+      "height": 8,
+      "depth": 12,
+      "required_mode": "Ground"
+    },
+    {
+      "index": 2,
+      "name": "WALL_APEX",
+      "position": [
+        90,
+        8,
+        340
+      ],
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 25,
+      "height": 25,
+      "depth": 12,
+      "required_mode": "WallRide"
+    },
+    {
+      "index": 3,
+      "name": "LAUNCH",
+      "position": [
+        180,
+        12,
+        150
+      ],
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 24,
+      "height": 12,
+      "depth": 12,
+      "required_mode": "Ground"
+    },
+    {
+      "index": 4,
+      "name": "AIR_01",
+      "position": [
+        180,
+        17,
+        120
+      ],
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 22,
+      "height": 22,
+      "depth": 12,
+      "required_mode": "AssistedFlight"
+    },
+    {
+      "index": 5,
+      "name": "AIR_02",
+      "position": [
+        180,
+        23,
+        75
+      ],
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 22,
+      "height": 22,
+      "depth": 12,
+      "required_mode": "AssistedFlight"
+    },
+    {
+      "index": 6,
+      "name": "AIR_03",
+      "position": [
+        180,
+        16,
+        30
+      ],
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 22,
+      "height": 22,
+      "depth": 12,
+      "required_mode": "AssistedFlight"
+    },
+    {
+      "index": 7,
+      "name": "LANDING",
+      "position": [
+        180,
+        2,
+        -10
+      ],
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 30,
+      "height": 10,
+      "depth": 12,
+      "required_mode": "Ground"
+    },
+    {
+      "index": 8,
+      "name": "RETURN",
+      "position": [
+        90,
+        2,
+        -120
+      ],
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 24,
+      "height": 10,
+      "depth": 12,
+      "required_mode": "Ground"
+    },
+    {
+      "index": 9,
+      "name": "FINISH",
+      "position": [
+        0,
+        2,
+        0
+      ],
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 22,
+      "height": 8,
+      "depth": 12,
+      "required_mode": "Ground"
+    }
+  ],
+  "surfaces": [
+    {
+      "mesh": "COL_Ground_Acceleration",
+      "surface": "Ground",
+      "samples": 141,
+      "triangles": 280
+    },
+    {
+      "mesh": "COL_WallRide_WallArc",
+      "surface": "WallRide",
+      "samples": 181,
+      "triangles": 360
+    },
+    {
+      "mesh": "COL_Ground_Launch",
+      "surface": "Ground",
+      "samples": 51,
+      "triangles": 100
+    },
+    {
+      "mesh": "COL_Landing_Landing",
+      "surface": "Landing",
+      "samples": 16,
+      "triangles": 30
+    },
+    {
+      "mesh": "COL_Ground_ReturnArc",
+      "surface": "Ground",
+      "samples": 181,
+      "triangles": 360
+    },
+    {
+      "mesh": "COL_WallRide_CeilingLab",
+      "surface": "WallRide",
+      "samples": 151,
+      "triangles": 300,
+      "practice_only": true
+    },
+    {
+      "mesh": "COL_WallRide_VerticalCurl",
+      "surface": "WallRide",
+      "samples": 151,
+      "triangles": 300,
+      "practice_only": true
+    }
+  ],
+  "flight_gap": {
+    "launch": [
+      180,
+      10,
+      150
+    ],
+    "landing_apron_center": [
+      180,
+      0,
+      5
+    ],
+    "allowed_bounds_center": [
+      180,
+      20,
+      78
+    ],
+    "allowed_bounds_size": [
+      60,
+      80,
+      180
+    ]
+  },
+  "recovery_positions": [
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      210
+    ],
+    [
+      180,
+      1,
+      240
+    ],
+    [
+      180,
+      1,
+      -20
+    ],
+    [
+      0,
+      1,
+      -25
+    ]
+  ],
+  "pit_slots": [
+    [
+      40,
+      1,
+      12
+    ],
+    [
+      40,
+      1,
+      26
+    ],
+    [
+      40,
+      1,
+      40
+    ],
+    [
+      40,
+      1,
+      54
+    ]
+  ],
+  "spectator_spawn": [
+    65,
+    8,
+    170
+  ],
+  "practice_spawn": [
+    105,
+    1,
+    80
+  ],
+  "vertical_curl": {
+    "practice_only": true,
+    "entry": [
+      240,
+      0,
+      30
+    ],
+    "top_exit": [
+      240,
+      47.207,
+      104.575
+    ],
+    "arc_angle_degrees": 125,
+    "radius_m": 30,
+    "width_m": 6,
+    "source_observation": "Tesla official X 2110913438293647789 at 17.70 seconds; geometry and scale are game interpretation",
+    "safe_recovery": [
+      105,
+      1,
+      80
+    ]
+  },
+  "ceiling_lab": {
+    "practice_only": true,
+    "entry": [
+      110,
+      0,
+      150
+    ],
+    "exit": [
+      110,
+      0,
+      300
+    ],
+    "maximum_height": 18,
+    "maximum_roll_degrees": 180,
+    "recommended_speed_mps": 12,
+    "safe_recovery": [
+      105,
+      1,
+      80
+    ]
+  },
+  "unity_playtest": "NOT RUN; geometry only",
+  "mesh_statistics": [
+    {
+      "name": "VIS_LOD0_Roadster_Deck_Ceramic",
+      "vertices": 2088,
+      "triangles": 2390,
+      "collision": false
+    },
+    {
+      "name": "COL_Ground_Acceleration",
+      "vertices": 282,
+      "triangles": 280,
+      "collision": true
+    },
+    {
+      "name": "VIS_LOD0_Roadster_Porcelain",
+      "vertices": 15146,
+      "triangles": 16094,
+      "collision": false
+    },
+    {
+      "name": "VIS_LOD0_Roadster_Guidance_Cyan",
+      "vertices": 6804,
+      "triangles": 7368,
+      "collision": false
+    },
+    {
+      "name": "VIS_LOD0_Roadster_Structure",
+      "vertices": 4956,
+      "triangles": 7724,
+      "collision": false
+    },
+    {
+      "name": "COL_WallRide_WallArc",
+      "vertices": 362,
+      "triangles": 360,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_Launch",
+      "vertices": 102,
+      "triangles": 100,
+      "collision": true
+    },
+    {
+      "name": "COL_Landing_Landing",
+      "vertices": 32,
+      "triangles": 30,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_ReturnArc",
+      "vertices": 362,
+      "triangles": 360,
+      "collision": true
+    },
+    {
+      "name": "COL_WallRide_CeilingLab",
+      "vertices": 302,
+      "triangles": 300,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_CeilingCatch",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    },
+    {
+      "name": "COL_WallRide_VerticalCurl",
+      "vertices": 302,
+      "triangles": 300,
+      "collision": true
+    },
+    {
+      "name": "VIS_LOD0_Roadster_Ramp_Red",
+      "vertices": 3000,
+      "triangles": 2912,
+      "collision": false
+    },
+    {
+      "name": "VIS_LOD0_Roadster_Basalt",
+      "vertices": 616,
+      "triangles": 1056,
+      "collision": false
+    },
+    {
+      "name": "COL_Ground_CurlSafetyPad",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_CurlAccess",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    },
+    {
+      "name": "VIS_LOD0_Roadster_Ocean",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": false
+    },
+    {
+      "name": "VIS_LOD0_Roadster_Warning_Amber",
+      "vertices": 312,
+      "triangles": 588,
+      "collision": false
+    },
+    {
+      "name": "COL_Landing_Apron",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_Paddock",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_PitConnector",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_ObservationDeck",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    },
+    {
+      "name": "COL_Ground_Practice",
+      "vertices": 8,
+      "triangles": 12,
+      "collision": true
+    }
+  ],
+  "render_triangles": 38144,
+  "collision_triangles": 1826,
+  "geometry_errors": []
+}

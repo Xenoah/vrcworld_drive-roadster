@@ -1,0 +1,28 @@
+{
+  "checks": {
+    "finite_geometry_and_no_zero_area_polygons": true,
+    "ordered_gate_indices": true,
+    "finish_equals_start": true,
+    "spawn_precedes_start": true,
+    "gate_forward_up_orthogonal": true,
+    "visual_under_50000_triangles": true,
+    "collision_under_2000_triangles": true,
+    "flight_gate_range": true,
+    "units_metres": true
+  },
+  "passed": true,
+  "render_triangles": 38144,
+  "collision_triangles": 1826,
+  "nominal_route_length_m": 1125.49,
+  "max_bank_degrees": 72,
+  "horizontal_curve_radius_m": 90,
+  "track_width_m": 18,
+  "flight_clear_ring_diameter_m": 21.6,
+  "unity_import_and_playtest": "NOT RUN",
+  "limitations": [
+    "No Unity/VRChat build, physics drive, multiplayer or headset validation.",
+    "90\u2013150 seconds is a design target; actual lap time has not been measured.",
+    "Static nonconvex MeshColliders required for ribbon surfaces; collision meshes must not render.",
+    "Flight path requires controlled descent for landing; flat unlimited glide cannot complete the intended course."
+  ]
+}
