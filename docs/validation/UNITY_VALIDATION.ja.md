@@ -1,133 +1,149 @@
 # Unity / ClientSim 検証記録
 
-2026-10-17 に Windows のローカル Unity Editor で実施しました。自動試験と画像の元データは [clientsim-smoke.json](clientsim-smoke.json) です。
+最終実行UTC: `2026-10-17T10:36:45.3369859Z`。**105/105項目成功**。生データは[clientsim-smoke.json](clientsim-smoke.json)。
 
-## 環境と範囲
+## 環境と入力の範囲
 
-| 項目 | 実際に使用した環境 |
-|---|---|
-| Unity | 2022.3.22f1 (887be4894c44)、Direct3D 11 |
-| SDK | VRChat Base / Worlds 3.10.5、VPM Resolver 0.1.29 |
-| テンプレート | この PC に導入済みの公式 VCC Worlds テンプレート |
-| CPU / GPU | AMD Ryzen 9 5950X / NVIDIA GeForce RTX 3070 |
-| 実行方式 | Unity Editor Play Mode、ClientSim、ローカル simulated player 1 人 |
-| 入力 | SDKの UdonManager.RunInputAction で移動／Jumpイベントを送信。ボタンは実行中UdonBehaviour.Interactを呼ぶ |
-| 写真のカメラ | Play Mode 中だけ追加した検証用追従カメラ。`ScreenCapture.CaptureScreenshot` で Game View を保存 |
-| 制限 | バンクと飛行は途中位置・姿勢・速度を設定して開始。フルラップ試験ではない |
+Unity 2022.3.22f1 / VRChat Base・Worlds 3.10.5 / Windows / NVIDIA GeForce RTX 3070。ClientSimのローカルsimulated player 1人で、実Udon VMとPhysXを実行した。
 
-設定メニューは検証カメラの InternalUI layer から除外します。左上の表示は同じ Play Mode 中に描画した検証用 HUD です。画像への生成 AI 加工、Blender レンダーの代用、合成は行っていません。検証用カメラと HUD はシーンへ保存されず、ワールドの利用者向け機能ではありません。
+SDK移動・Jump・Use・Grabイベントと実行中Interactを送信する。Desktop Q/E・Shiftの独立性検査はキー状態アダプター値を注入し、中立待機時計を一部の境界試験で進める。VRはEditor限定でプレイヤーAPIのVR識別・右手追跡データを合成し、終了時にフックを復元する。配布ワールドにはこのフィクスチャを含めない。**実キーボード、実トリガー、HMD、実リマップの検証ではない。**
+
+バンク・飛行・着陸試験は途中位置・姿勢・速度を設定する。完全な一周ではない。所有権通知と休止は単一ClientSim内の分岐確認で、複数クライアントや実Alt-Tabの証拠ではない。SDK3.10.5はApplication.isFocusedをUdonへ公開していない。OSフォーカス／SteamVRダッシュボード／実トラッキング喪失時の解除は未検証。
 
 ## 結果
 
-Unity C# と UdonSharp のコンパイル、シーン構築、ClientSim スモーク試験 **60/60 項目成功**。検査項目は次のとおりです。
+Unity C#・UdonSharpコンパイル、生成済みシーンのPlay Mode起動に成功。Python静的・数理33件とC#構文解析は別途実施する検査で、CIはUnity実行試験ではない。
 
-| 検査 | 結果・意味 |
-|---|---|
-| ClientSim 初期化 | ローカルプレイヤー API 有効 |
-| Udon VM | Vehicle / Run の実行中 backing behaviour を取得 |
-| 路面 | 15 個の MeshCollider を生成 |
-| 車輪ピボット | 4 輪 × 3 LOD の 12 ピボットすべてに表示メッシュを接続 |
-| 車両 LOD | 3 段の LODGroup が存在。遷移品質・性能は別途未検証 |
-| 座標整合 | FBX の全 10 CP marker と manifest の位置差が .01 m 未満 |
-| 乗車 | Interact → 所有権確認 → Station 入場 → driver ID 一致 |
-| フリー走行 | 静止から 2.4 秒加速し、10 m 超移動・5 m/s 超・mode 1 を確認 |
-| タイムアタック | 開始後 START を通過し `running=true`, `nextGate=1` |
-| リセット | 計測停止、gate 0、スタート位置復帰 |
-| バンク | 72 度バンク頂点付近へ配置、12 m/s の初速、.9 秒間に mode 2 の接地を確認 |
-| 飛行 | LAUNCH 手前へ配置し、自由走行のゲート面通過から `flightAllowed=true` と mode 3 を確認 |
-| 失格 | 計測中に 25 m の位置不連続を与え、discontinuity として無効化 |
-| 降車 | Station 退出後、着座 false / driver −1 |
-| キャプチャ 8 件 | それぞれ PNG が生成され、ファイルサイズと目視で内容を確認 |
-| 実行エラー | EnteredPlayMode 以降の Error / Exception / Assert は 0 件 |
+| 検査 | 結果 | 詳細 |
+|---|---|---|
+| ClientSim initialized | PASS | one local player |
+| Udon programs initialized | PASS | Vehicle and Run backing behaviours |
+| Scene colliders | PASS | mesh colliders=15 |
+| Vehicle LODs | PASS | 3 LOD levels |
+| Wheel visual pivots connected | PASS | connected=12/12 |
+| FBX markers match manifest | PASS | maximum position error=0.000000 m |
+| Station entry | PASS | driver=1 |
+| Free drive acceleration | PASS | position=(0.000, -0.035, 35.883); speed=40.413; mode=1 |
+| Time attack start gate | PASS | nextGate=1; TIME ATTACK |
+| Reset cancels run | PASS | position=(0.000, 0.100, -12.000); speed=0.000; mode=1 |
+| Banked section contact | PASS | position=(101.743, 7.401, 339.243); speed=13.941; mode=2; modeMask=22; scripted placement at 72 degree bank |
+| Free drive launch gate and assisted flight | PASS | position=(180.000, 17.532, 82.973); speed=50.755; mode=3; modeMask=26 |
+| Discontinuity invalidates run | PASS | INVALID / discontinuity |
+| Nozzle demand follows correction moment | PASS | torque=(-1.205, 0.000, 2.284); down jets=0.02219623,0.3418884,0,0.1731685,0,5.960465E-09,0 |
+| Nozzle exhaust follows body orientation | PASS | world downward angle=36.52 |
+| All seven exhaust directions oppose modeled force | PASS | minimum opposite-direction dot=1.000000 |
+| Air attitude error converges | PASS | initial=41.458; after 0.9 s=6.481 |
+| Angular velocity damping | PASS | initial=1.972; after .45 s=0.179 |
+| Unassisted control drop contacts road | PASS | touchdown approach=15.859 m/s; rebound=2.150 |
+| Precontact landing braking | PASS | highest braking clearance=7.000 m |
+| Ground mist begins before contact | PASS | mist observed at clearance=1.659 m |
+| Landing assistance reduces impact approach | PASS | baseline=15.859; assisted=1.862 m/s |
+| Ground settling without hovering | PASS | height=-0.035; vertical=0.000 |
+| Horizontal momentum retained | PASS | initial=12; after landing=11.144 m/s |
+| Postcontact rebound bounded | PASS | peak upward velocity=0.141 m/s |
+| Smoke persists after valve closes | PASS | at close=20; after .12 s=20 |
+| Smoke expires within lifetime | PASS | after 3.12 s=0 |
+| Assisted flight settles on temporary flat test pad | PASS | initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 101.586); speed=20.821; mode=1 |
+| Cockpit moving parts wired across LODs | PASS | 3 yokes + 3 throttle pedals + 3 brake pedals |
+| Movement exit disabled with explicit escape | PASS | X and EXIT use ExitStation; Jump is flight control |
+| Occupied boarding feedback | PASS | simulated driverId=99; OCCUPIED / DRIVER 99 |
+| Door control enters station | PASS | RoadsterAction Interact -> vehicle -> station |
+| Move axis does not unseat driver | PASS | ClientSim station movement path, axis=1 |
+| Input deadzone rejects drift | PASS | SDK InputMove callbacks at .08; deadzone=.12 |
+| Live speed and road mode instruments | PASS | display=43 km/h; physics=48.54 |
+| Yoke and throttle pedal follow input | PASS | yoke=21.83; pedal=18.00 |
+| Moving reset requires confirmation | PASS | RESET? PRESS AGAIN WITHIN 2s |
+| Confirmed reset clears inputs | PASS | second Interact restores start box and neutral controls |
+| Time attack panel starts real run | PASS | LAP 1 / 1   2.07 s / CP 1 / 10    BEST -- |
+| Steering profile changes full-scale response | PASS | COMFORT full axis -> 0.650 |
+| Brake pedal follows negative axis | PASS | brake pedal=18.00 |
+| Flight and thruster cockpit telemetry | PASS | AUTO / LEVEL ASSIST / LANDING  ARMED |
+| Help control changes live panel | PASS | help hidden via physical panel Interact |
+| Jump no longer exits the driver seat | PASS | Jump is now a pilot input |
+| Explicit EXIT safely returns to paddock | PASS | player=(48.00, 0.00, 6.00); exit=(48.00, 1.00, 6.00) |
+| Exit restores available boarding state | PASS | DRIVER ACCESS / AVAILABLE / SAFE EXIT / PADDOCK / INTERACT / REQUEST SEAT |
+| Boarding defaults to Auto and landing assist | PASS | new driver defaults |
+| Manual neutral preserves tilt with landing assist on | PASS | orientation delta=0 |
+| Manual neutral damps angular velocity | PASS | initial=1.972; final=0.1917238 |
+| Manual pitch isolated | PASS | SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(0.100, 0.000, 0.000) |
+| Manual yaw isolated | PASS | SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(0.000, 0.100, 0.000) |
+| Manual roll isolated | PASS | SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(0.000, 0.000, -0.100) |
+| Manual three axes simultaneous | PASS | SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(-0.100, -0.100, 0.100) |
+| Manual Space supplies forward thrust | PASS | Space adapter -> thrust=0.1 |
+| Desktop Shift overrides held thrust | PASS | throttle=-0.1666667 |
+| Mode change clears and blocks held controls | PASS | held inputs require neutral |
+| VR input method selected by SDK hook | PASS | synthetic ClientSim VR identity; no HMD |
+| Unheld yoke blocks right trigger and stick Y | PASS | no throttle from left stick Y or panel trigger |
+| Left grip is neither yoke nor index brake | PASS | InputGrab LEFT is separate from InputUse LEFT |
+| Yoke grip outside reach is rejected | PASS | synthetic hand 1 m from anchor |
+| Right grip acquires nearby yoke | PASS | InputGrab RIGHT, separate from InputUse |
+| Right grip does not become accelerator | PASS | grip acquires pose control only |
+| Right index button ramps forward thrust | PASS | binary Use -> smoothed throttle=1 |
+| Both index triggers prioritize brake immediately | PASS | right+left held; throttle=-0.1666667 |
+| Left index button ramps braking | PASS | throttle=-1 |
+| Right trigger release preserves left brake | PASS | independent right release with left held |
+| Left trigger release preserves right request | PASS | independent left release; smooth output crosses neutral over time |
+| Trigger release returns to zero | PASS | zero after smooth release |
+| VR yoke pitch isolated | PASS | synthetic right-hand pitch 22 degrees |
+| VR yoke roll isolated | PASS | synthetic right-hand roll 25 degrees |
+| VR left stick yaw isolated | PASS | Look inputs unused; yaw from MoveHorizontal |
+| VR left stick vertical is unused | PASS | MoveVertical=1 with no index trigger |
+| VR three axes plus thrust simultaneous | PASS | P/Y/R=(0.38, 0.36, 0.55) |
+| Panel Interact disarms held trigger | PASS | panel disarms before action |
+| Releasing yoke cuts held acceleration | PASS | right Use remains held while grip releases |
+| Held accelerator cannot reacquire yoke | PASS | release index trigger before regripping |
+| SDK menu-style releases clear VR propulsion | PASS | synthetic release events; not real menu or focus actuation |
+| SDK suspension clears held controls | PASS | ClientSim isSuspended=true, real Udon branch |
+| Resume waits for neutral | PASS | held index/grip do not rearm |
+| Long frame gap disarms controls | PASS | synthetic 0.7 s clock gap; no OS focus API |
+| Ownership callback clears controls | PASS | single-client callback branch; not network transfer |
+| Input family change clears VR state | PASS | VR fixture restored to ClientSim desktop |
+| Landing switch independent of Manual | PASS | Manual stays selected; landing OFF |
+| Auto Jump supplies permitted lift without exiting | PASS | height delta=-0.4366226; vy=2.024003 |
+| Jump cannot bypass flight permission | PASS | permission removed; no applied lift or lift exhaust |
+| Crossing flight envelope revokes permission | PASS | x=211 beyond permitted max x=210 |
+| EXIT survives driver authority mismatch | PASS | simulated driverId disagreement; local ExitStation still available |
+| Particle budget respected | PASS | whole-run peak=447; configured cap=1280 |
+| Station exit releases driver | PASS | driver=-1 |
+| Capture clientsim-free-drive.png | PASS | 223169 bytes |
+| Capture clientsim-time-attack.png | PASS | 218523 bytes |
+| Capture clientsim-bank-section.png | PASS | 322880 bytes |
+| Capture clientsim-assisted-flight.png | PASS | 427466 bytes |
+| Capture clientsim-thruster-attitude.png | PASS | 302546 bytes |
+| Capture clientsim-thruster-approach.png | PASS | 266709 bytes |
+| Capture clientsim-thruster-touchdown.png | PASS | 267502 bytes |
+| Capture clientsim-thruster-residual.png | PASS | 264016 bytes |
+| Capture clientsim-cockpit-driving.png | PASS | 518406 bytes |
+| Capture clientsim-cockpit-flight.png | PASS | 629101 bytes |
+| Capture clientsim-cockpit-controls.png | PASS | 488486 bytes |
+| Capture clientsim-cockpit-boarding.png | PASS | 337527 bytes |
+| Capture clientsim-manual-desktop.png | PASS | 641786 bytes |
+| Capture clientsim-manual-vr-inputs.png | PASS | 610057 bytes |
+| Capture clientsim-pilot-mode-panel.png | PASS | 489626 bytes |
+| No runtime errors | PASS |  |
 
-この検査では車両物理の式を Python 等へ置き換えず、Unity PhysX と Udon VM を実行しています。一方、実キーボードや VR 入力を使う人間の通しプレイではありません。SDK入力イベントの自動送信と区間途中への配置による限定試験です。
+## 画像と再現
 
-Python 静的・数理検査は既存 17 件と Review 16 件の計 **33 件成功**。tree-sitter の C# 構文解析も成功しました。CI に Review 16 件を追加し、Linux でも両方を実行します。
+Game Viewキャプチャは15枚。全画像はPlay Mode中にScreenCaptureで保存し、検証用追従／設計目位置／パネル確認カメラを使用する。ローカル仮アバターは撮影カメラのみから除外。画像加工、Blenderレンダーの代用、HMD視点の偽装は行っていない。
 
-## 実行で見つけて修正したこと
+- [clientsim-free-drive.png](../images/clientsim-free-drive.png)
+- [clientsim-time-attack.png](../images/clientsim-time-attack.png)
+- [clientsim-bank-section.png](../images/clientsim-bank-section.png)
+- [clientsim-assisted-flight.png](../images/clientsim-assisted-flight.png)
+- [clientsim-thruster-attitude.png](../images/clientsim-thruster-attitude.png)
+- [clientsim-thruster-approach.png](../images/clientsim-thruster-approach.png)
+- [clientsim-thruster-touchdown.png](../images/clientsim-thruster-touchdown.png)
+- [clientsim-thruster-residual.png](../images/clientsim-thruster-residual.png)
+- [clientsim-cockpit-driving.png](../images/clientsim-cockpit-driving.png)
+- [clientsim-cockpit-flight.png](../images/clientsim-cockpit-flight.png)
+- [clientsim-cockpit-controls.png](../images/clientsim-cockpit-controls.png)
+- [clientsim-cockpit-boarding.png](../images/clientsim-cockpit-boarding.png)
+- [clientsim-manual-desktop.png](../images/clientsim-manual-desktop.png)
+- [clientsim-manual-vr-inputs.png](../images/clientsim-manual-vr-inputs.png)
+- [clientsim-pilot-mode-panel.png](../images/clientsim-pilot-mode-panel.png)
 
-1. **初回 Program Asset 不足**: `AddUdonSharpComponent` が例外になるため、3 本の UdonSharp Program Asset を生成・コンパイルしてからシーンへ追加する処理を追加しました。既存の同一スクリプト用 Asset は再利用します。
-2. **誤ったコース選択**: `Array.Sort` による FBX 選択で Windows では `LOD1_VisualOnly` が先頭になり、路面 Collider がありませんでした。メイン `VectorCoastal_Course.fbx` を明示し、Collider 0 件なら生成を失敗させます。
-3. **FBX の X 軸反転**: 初回インポートでは WALL_APEX が `(−90,8,340)`、LAUNCH が `(−180,12,150)` にあり、JSON と反対側でした。インポートした見た目側だけ X の符号を補正し、Physics / Station / ゲートの canonical 座標を維持します。全 CP marker と実接地で再検証しました。
-4. **車輪の回転軸**: Blender 由来のピボットを直接回すとローカル軸が Unity と一致しません。生成した車体の Prefab インスタンスを展開し、Unity 軸の親ピボットを作り、見た目の位置を維持して車輪を接続しました。未展開の Prefab では SetParent が拒否されたため、12 ピボットすべてに Renderer が接続されることも検査します。VR での見え方は未検証です。
-5. **Windows の文字コード**: Python 検査で日本語 README が cp1252 として読まれて失敗したため、UTF-8 を明示しました。
+`Drive Roadster → Run ClientSim smoke validation`または`-executeMethod RoadsterValidation.Run -roadsterExit`で再実行する。同名JSONと画像を上書きする。`RoadsterValidation.BuildScene`は生成結果をcanonicalの`DriveRoadster.unity`へ保存し直す検証用入口であり、手編集内容を先に保全すること。
 
-SDK 3.10.5 の `VRCDefaultWorldScene.scenetemplate` は、参照先ファイル名とクラス名が異なる pipeline を持ち、この環境では新規シーン保存時に `SceneTemplateAsset.CreatePipeline` の `ArgumentNullException` を出しました。シーン保存・Udon コンパイル・その後の Play Mode は完了しています。SDK 本体には変更を加えていません。保存済みシーンを開く最終スモーク実行とは分けて扱っています。
+SDK3.10.5の既知のSceneTemplate pipeline / ArgumentNullExceptionは新規シーン保存時に発生した。シーン保存・Udonコンパイル・Play Modeは成功しており、SDK本体は変更していない。Play Mode開始後のエラーは上表のNo runtime errorsで別に集計する。
 
-## 画像
-
-- [直線のフリー走行](../images/clientsim-free-drive.png) — mode 1、通常加速の途中。
-- [タイムアタック開始](../images/clientsim-time-attack.png) — START 通過後、CP 1/10。完走の証拠ではありません。
-- [バンク区間](../images/clientsim-bank-section.png) — 途中配置後の mode 2。直線からバンクまでの連続操作は未検証。
-- [飛行区間](../images/clientsim-assisted-flight.png) — LAUNCH 手前への配置後、ゲート通過で mode 3。連続した飛行区間からの着地・一周完走は未検証。別途、一定条件の自動落下試験を実施。
-
-バンク・飛行の HUD にある `INVALID / reset or driver change` は、前のタイムアタックをリセットして自由走行の区間検証へ移ったためです。計測中の成功画像としては扱いません。
-
-## 再現と残る検証
-
-Unity の **Drive Roadster → Run ClientSim smoke validation** を実行すると、同じ JSON と 12 枚の PNG を更新します。Editor 起動引数でも `-executeMethod RoadsterValidation.Run -roadsterExit` を指定できます。試験が失敗した場合は終了コード 1、全項目成功なら 0 です。
-
-未実施: VRChat SDK Validation / Build & Test、VRChat へのアップロード、実キーボード・コントローラー入力、HMD、複数クライアント、同時乗車、途中参加、切断、所有権移譲、記録のネットワーク引き継ぎ、連続一周、全着地条件、練習用垂直カール/天井、VR の視認性・快適性、CPU/GPU フレーム時間、実ネットワーク帯域。詳細は [受入試験](../ACCEPTANCE_TESTS.ja.md) を参照してください。
-
-生の Unity ログはプロジェクトの `artifacts/` に残しています。ローカル環境情報を含むため Git 管理せず、公開する結果は本資料と JSON に限定します。
-
-## スラスター・着陸補助の追加検証
-
-最終実行UTC: `2026-10-17T08:22:24.2493624Z`。全 **60/60** 項目成功、Play Mode中の Error / Exception / Assert は0件。
-
-実際の Udon VM / PhysX に対し、傾いた空中姿勢、角速度付与、同じ初期状態の補助オン/オフ落下を実施しました。落下比較条件は高さ7 m、初期降下11 m/s、前進12 m/s。接地速度はサスペンション2本以上のヒットを検知する直前の法線方向接近速度です。実車測定や全条件の保証ではありません。
-
-既存揚力との連携検査だけは、飛行許可範囲内にPlay Mode限定の平面テスト台を設置し、高度3 m・降下2 m/s・前進28 m/sからmode 3を経由して接地することを確認しました。降下中の滑空揚力を解除し、着陸側の重力補償と重複させない修正を加えています。台は保存シーンへ含めず、画像用の検証は元コースを使用します。
-
-| 検査 | 実測ログ |
-|---|---|
-| Nozzle demand follows correction moment | torque=(-1.344, 0.000, 2.546); down jets=0.02474776,0.3811896,0,0.1930749,2.384186E-08,0,0 |
-| Nozzle exhaust follows body orientation | world downward angle=37.12 |
-| All seven exhaust directions oppose modeled force | minimum opposite-direction dot=1.000000 |
-| Air attitude error converges | initial=41.458; after 0.9 s=6.855 |
-| Angular velocity damping | initial=1.972; after .45 s=0.179 |
-| Unassisted control drop contacts road | touchdown approach=15.859 m/s; rebound=2.150 |
-| Precontact landing braking | highest braking clearance=7.000 m |
-| Ground mist begins before contact | mist observed at clearance=1.659 m |
-| Landing assistance reduces impact approach | baseline=15.859; assisted=1.862 m/s |
-| Ground settling without hovering | height=-0.035; vertical=0.000 |
-| Horizontal momentum retained | initial=12; after landing=11.138 m/s |
-| Postcontact rebound bounded | peak upward velocity=0.141 m/s |
-| Smoke persists after valve closes | at close=20; after .12 s=20 |
-| Smoke expires within lifetime | after 3.12 s=0 |
-| Assisted flight settles on temporary flat test pad | initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 122.734); speed=33.282; mode=1 |
-| Particle budget respected | whole-run peak=477; configured cap=1280 |
-
-画像用の追加降下は前進速度0で行い、[姿勢復元](../images/clientsim-thruster-attitude.png)、[接地前](../images/clientsim-thruster-approach.png)、[接地後](../images/clientsim-thruster-touchdown.png)、[噴射停止後](../images/clientsim-thruster-residual.png)を撮影しました。[設計・映像観察](../THRUSTERS.ja.md)。
-
-非 owner の物理処理が既存ガードを越えないことはソース確認です。複数クライアントの実通信・所有権移譲・遠隔の煙は未検証。粒子数は全試験中の観測最大と設定上限であり、GPU/VRフレーム時間の測定ではありません。
-
-## 車内・操作系統の検証
-
-実行UTC: `2026-10-17T08:22:24.2493624Z`。この版は合計 **60/60 項目成功**。SDKの入力イベントを通して実Udon VMを動かし、各ボタンのInteractを呼んだ。以前のハーネスの生throttle／steeringの直接設定は置き換えた。画面キャプチャは計12枚、Play Mode中のError／Exception／Assertは0件。
-
-ClientSim内のStationManagerは通常のFindObject検索から見えないため、Editor専用ハーネスではResources.FindObjectsOfTypeAllで着座中のManagerを取得する。初回ハーネス試行のNullReferenceExceptionはこの探索方法を修正して解消した。この探索修正のためにSDKや配布用ワールドコードを変更していない。
-
-| 検証 | 実行時の結果 |
-|---|---|
-| Cockpit moving parts wired across LODs | 3 yokes + 3 throttle pedals + 3 brake pedals |
-| Movement exit disabled with explicit escape | mapped Jump and EXIT use ExitStation |
-| Occupied boarding feedback | simulated driverId=99; OCCUPIED / DRIVER 99 |
-| Door control enters station | RoadsterAction Interact -> vehicle -> station |
-| Move axis does not unseat driver | ClientSim station movement path, axis=1 |
-| Input deadzone rejects drift | SDK InputMove callbacks at .08; deadzone=.12 |
-| Live speed and road mode instruments | display=37 km/h; physics=36.92 |
-| Yoke and throttle pedal follow input | yoke=21.83; pedal=18.00 |
-| Moving reset requires confirmation | RESET? PRESS AGAIN WITHIN 2s |
-| Confirmed reset clears inputs | second Interact restores start box and neutral controls |
-| Time attack panel starts real run | LAP 1 / 1   2.07 s / CP 1 / 10    BEST -- |
-| Steering profile changes full-scale response | COMFORT full axis -> 0.650 |
-| Brake pedal follows negative axis | brake pedal=18.00 |
-| Flight and thruster cockpit telemetry | ATTITUDE HOLD  ACTIVE / LANDING  ARMED |
-| Help control changes live panel | help hidden via physical panel Interact |
-| Mapped Jump exits safely to paddock | player=(48.00, 0.00, 6.00); exit=(48.00, 1.00, 6.00) |
-| Exit restores available boarding state | DRIVER ACCESS / AVAILABLE / SAFE EXIT / PADDOCK / INTERACT / REQUEST SEAT |
-
-撮影は [走行中](../images/clientsim-cockpit-driving.png)、[飛行中](../images/clientsim-cockpit-flight.png)、[操作パネル](../images/clientsim-cockpit-controls.png)、[乗車状態](../images/clientsim-cockpit-boarding.png)。すべて実Game Viewの画像。車内は設計上の目位置とパネル確認カメラを使用し、ClientSimの着座IKのない仮アバターだけをカメラから除外した。これは実Station視点・アバターとの干渉・HMDトラッキングの検証ではない。
-
-占有拒否は単一ClientSimでdriverId=99を設定した分岐確認。実際に2人の所有権が競合した証拠ではない。VRChat Build & Test、物理キー／コントローラー、実Interactの狙いやすさ、複数クライアント、HMD、フルラップは引き続き未検証。[仕様](../COCKPIT.ja.md) と [受入試験](../ACCEPTANCE_TESTS.ja.md) を参照。
+未実施: VRChat SDK Validation / Build & Test、ワールドアップロード、HMD・実入力・パネルの狙いやすさ、複数クライアント・同時乗車・途中参加・切断、連続フルラップ、全着地条件、VR快適性、GPUフレーム時間・実帯域。詳細は[受入試験](../ACCEPTANCE_TESTS.ja.md)。生ログは個人環境情報を含むためignoredのartifacts/へ保存する。

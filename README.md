@@ -4,7 +4,7 @@
 
 ## 検証状態
 
-2026-10-17、Windows 上の **Unity 2022.3.22f1 / VRChat SDK 3.10.5** で C#・UdonSharp コンパイルとシーン構築を実施しました。**ClientSim の区間スモーク試験 60/60 項目成功**。乗降、直線加速、タイムアタックの START 通過、リセット、バンク接地、LAUNCH 通過からのアシスト飛行、不連続移動による失格、姿勢補助・3層白煙・着陸補助を確認しています。車内計器、ヨーク／ペダルの入力連動、操作パネル、感度切替、明示的な降車も SDK 入力イベントで検証しました。
+2026-10-17、Windows 上の **Unity 2022.3.22f1 / VRChat SDK 3.10.5** で C#・UdonSharp コンパイルとシーン構築を実施しました。**ClientSim の区間スモーク試験 105/105 項目成功**。乗降、直線加速、タイムアタックの START 通過、リセット、バンク接地、LAUNCH 通過からのアシスト飛行、不連続移動による失格、姿勢補助・3層白煙・着陸補助を確認しています。車内計器、Auto/Manual、独立3軸、左右トリガーのブレーキ優先、仮想ヨーク、入力解除、独立着陸補助、EXITも検証しました。デスクトップのQ/E・Shiftはキー状態の注入、VRは合成したSDK識別・右手追跡データを含む試験です。
 
 Python 静的・数理検査 33 件と C# 構文解析も成功。実行条件と生の検査値は [Unity 検証記録](docs/validation/UNITY_VALIDATION.ja.md) / [JSON](docs/validation/clientsim-smoke.json) を参照してください。
 
@@ -34,7 +34,7 @@ LAUNCH 手前へ配置してからゲート面を横切り、mode 3 に移行し
 
 公式 [Kickflip](https://x.com/Tesla/status/2110926164306931860) / [Ramp](https://x.com/Tesla/status/2110913438293647789) の回転中の噴流、接地前から広がる雲、停止後の残留霧を再観察して追加しました。映像の見える振る舞いを参考にしたゲーム補助であり、実車の内部機構や性能を断定する実装ではありません。時刻付き観察、式、全パラメーター、ノズル対応は [詳細技術資料](docs/THRUSTERS.ja.md) を参照してください。
 
-- **姿勢**: 空中の Quaternion 姿勢誤差と実角速度から PD トルクを算出。四隅の下向きノズルと左右ノズルの強弱を、その補正の方向に対応させます。ジェット方向は車体の回転に追従します。
+- **姿勢**: Autoは空中のQuaternion姿勢誤差と実角速度からPDトルクを算出。Manualは3軸の角速度要求と実角速度の差を使用し、水平復帰しません。四隅の下向きノズルと左右ノズルの強弱を、その補正の方向に対応させます。ジェット方向は車体の回転に追従します。
 - **着陸**: 路面までの高さと接近速度から接地前の制動量を計算。最大42 m/s²の車体上向き補助で降下を緩和し、接地後0.35秒の過大反発を抑えます。地上では着陸噴射を止めます。低高度で降下中は既存の滑空揚力を解除し、着陸制動との重複を防ぎます。
 - **白煙**: 細い Local ジェット、World の残留煙、排気方向の Raycast が路面へ当たった地点の拡散霧の3層。接地前から霧を生成し、噴射停止後も寿命まで残ります。
 - **負荷と同期**: 18個の ParticleSystem を再利用、最大1,280粒子。7噴射強度を2個の同期 int へ量子化し、既存スナップショットで送ります。物理は owner のみ。実ネットワークと GPU 負荷は未測定です。
@@ -67,34 +67,59 @@ Unity Editor Play Mode / ClientSim。設計上の `CockpitEye_AuthoredReference`
 
 ![車内操作パネル](docs/images/clientsim-cockpit-controls.png)
 
-同環境のパネル確認用カメラ。5個の Interact ボタンで TA 開始、リセット、操舵感度、ヘルプ、安全な退出を操作します。映像用の飾りスイッチと動作するボタンは [車内技術資料](docs/COCKPIT.ja.md) で区別しています。
+同環境のパネル確認用カメラ。7個のInteractボタンでAuto/Manual、着陸補助、TA開始、リセット、感度、ヘルプ、退出を操作します。映像用の飾りスイッチと動作するボタンは [車内技術資料](docs/COCKPIT.ja.md) で区別しています。
 
 ![運転席の乗車状態表示](docs/images/clientsim-cockpit-boarding.png)
 
 同環境。降車後の AVAILABLE 表示。ドア側の乗車操作から所有権要求・Station 着座へ進みます。
 
+![Manualの車内表示](docs/images/clientsim-manual-desktop.png)
+
+Unity Editor Play Mode / ClientSim。SDK入力イベントによるManualの区間試験。物理キーボード操作ではありません。
+
+![VR入力分岐の検証](docs/images/clientsim-manual-vr-inputs.png)
+
+同じGame View。VR識別と右手姿勢をEditor限定フィクスチャで供給し、左右ボタンと移動イベントを送信しています。**実HMD・実コントローラーの画像ではありません。**
+
+![モードと着陸補助パネル](docs/images/clientsim-pilot-mode-panel.png)
+
+同環境のパネル確認用カメラ。Auto/Manualと着陸補助を別々に表示・操作します。
+
 ## 操作
+
+乗車時は **Auto・着陸補助ON**。Manualは空中の操縦方式を切り替え、地上は通常運転です。左右人差し指トリガーは `InputUse(bool, handType)` の押下で読み、立上り／解除を平滑化します。握り量の連続アナログ取得には依存しません。
 
 | 操作 | Desktop | VR |
 |---|---|---|
-| 乗車 | 運転席ドアの DRIVER ACCESS または車体を Interact | 同じ場所を Interact |
-| 加速 | W / 移動入力の前 | 移動スティック縦の正方向 |
-| 制動・後退 | S / 移動入力の後 | 移動スティック縦の負方向 |
-| 操舵 | A / D | 移動スティック横 |
-| 飛行中の下降補助 | S | 移動スティック縦の負方向 |
-| スタートへ復帰 | R または RESET | 車内 RESET を Interact |
-| タイムアタック開始 | T または TIME ATTACK | 車内 TIME ATTACK を Interact |
-| 操舵感度 | C または STEER | 車内 STEER を Interact |
-| 操作説明の表示 | H または CONTROLS | 車内 CONTROLS を Interact |
-| 降車 | Jump（標準 Space）/ X / EXIT | 割り当て済み Jump / 車内 EXIT |
+| 乗車 | DRIVER ACCESS / 車体をInteract | 同じ場所をInteract |
+| 地上加速 | W | 右人差し指トリガー。右グリップでヨークを保持中のみ |
+| 地上制動 | S（停止後は後退） | 左人差し指トリガー。停止後に後退しない |
+| 地上操舵／空中yaw | A / D | 左スティック左右。右ヨーク保持中 |
+| Auto空中推力／制動 | W / S | 右／左人差し指トリガー |
+| Auto離陸・上昇要求 | Jump（標準Space）を保持 | Jumpを保持。右ヨーク保持中 |
+| Manual空中pitch | W＝機首下げ、S＝機首上げ | 握った右手ヨークの前後傾き |
+| Manual空中roll | Q＝左、E＝右 | 握った右手ヨークの左右傾き |
+| Manual空中推力／制動 | Space / Shift | 右／左人差し指トリガー |
+| ヨーク取得／解放 | 不要 | ヨークの近くで右グリップ。解放または手を離すと解除 |
+| Auto / Manual | F / モードボタン | モードボタンをInteract |
+| 着陸補助ON / OFF | L / LANDINGボタン | LANDINGボタンをInteract |
+| スタートへ復帰 | Backspace / RESET | RESETをInteract |
+| TA / 感度 / ヘルプ | T / C / H、または車内ボタン | 車内ボタンをInteract |
+| 降車 | X / EXIT | 車内EXIT（キーボードXも可） |
 
-乗車は所有権取得後に確定し、占有中は理由を表示します。移動軸による Station 自動退出を無効にし、Jump／EXIT から明示的に降車します。降車先は常にパドックです。速度2 m/s超のリセットは2秒以内の二度押しが必要です。降車とリセットで入力をゼロにします。
+**VR左スティック前後は未使用**。右スティック／Lookイベントも操縦には使いません。ManualのVR Jumpには推力を重複割当しません。視点は通常のマウス／HMDに任せます。RはVRChat標準Action Menu用に空けました。
 
-入力の遊びは .12。操舵はカーブ指数1.4、感度は COMFORT .65／NORMAL .85／DIRECT 1.0です。ヨークとペダルはこの入力に追従するアニメーションで、手でつかむ操作や足のトラッキングは実装していません。車内ボタンの実際の狙いやすさ、物理キー、VRコントローラー、各アバターの着座は受入試験が必要です。自動検証は SDK 入力イベントと Udon Interact を実行します。
+飛行推力とAuto Jump上昇は **LAUNCH通過後の許可区間内のみ**。Jumpは降車に使いません。Manualでは無入力時の角速度を減衰しますが、水平へは戻しません。着陸補助はモードと独立し、Manualの姿勢を勝手に起こしません。強く傾いて補助できないときは `LANDING CHECK ATTITUDE` を表示します。
 
-フリー走行は着座してそのまま加速します。飛行は **LAUNCH ゲートを正方向に通過したときだけ** 許可され、LANDING ゲートで解除されます。空中の任意位置から飛び始める機能ではありません。
+右グリップのヨーク取得には両トリガーの解放が必要です。両トリガー同時はブレーキ優先で、正の推力を即座に解除します。右ヨーク解放・距離超過・車内パネル操作ではアクセルを切ります。再取得だけで押しっぱなしのアクセルが復活することはありません。
 
-タイムアタックはスタート位置から **8 m 以内・速度 1 m/s 以下** で開始します。開始時に車両をスタートへ戻し、START → ACCEL → WALL_APEX → LAUNCH → AIR_01 → AIR_02 → AIR_03 → LANDING → RETURN → FINISH の順で通過します。リセット・運転者変更・不連続な位置移動・不正なゲート通過で失格になります。
+乗車、リセット、Auto/Manual切替、着陸補助切替、パネル操作、Manualの地上／空中切替、所有権通知、入力方式の系統変更、SDK休止／長い処理中断では入力をクリアします。入力を中立に戻して0.15秒待ってから再開します。Keyboard↔Mouseの通常の切替だけでは操縦を解除しません。移動やJumpによるStation自動退出は無効で、EXITはパドックへ戻ります。速度2 m/s超のリセットは2秒以内の二度押しです。
+
+SDK 3.10.5は `Application.isFocused` をUdonへ公開していません。SDKの入力解除と休止・処理中断は処理しますが、実Alt-Tab、SteamVRダッシュボード、トラッキング喪失時の通知は未検証です。実HMDのリマップ、手の到達性、VR快適性も未検証。VRコントローラーの押下と手姿勢はClientSimの合成入力で検証しています。
+
+タイムアタックはスタートから8 m以内・速度1 m/s以下で開始し、START → ACCEL → WALL_APEX → LAUNCH → AIR_01 → AIR_02 → AIR_03 → LANDING → RETURN → FINISHの順に通過します。リセット・運転者変更・不連続移動・不正なゲート通過は失格です。
+
+Meta Touchの物理入力、OpenXRプロファイル、Udon公開イベントの対応と追加試験は[Meta入力バインド資料](docs/INPUT_BINDINGS_META.ja.md)に掲載しています。
 
 ## 導入と再現
 
@@ -108,7 +133,7 @@ Unity Editor Play Mode / ClientSim。設計上の `CockpitEye_AuthoredReference`
 6. 自動スモーク試験は **Drive Roadster → Run ClientSim smoke validation**。結果を `docs/validation/clientsim-smoke.json`、画像を `docs/images/` へ保存します。同名の検証成果物は更新されます。実行中のプロジェクトを保存してから利用してください。
 7. 公開前に SDK Validation と VRChat Build & Test、および [実機受入試験](docs/ACCEPTANCE_TESTS.ja.md) を実施してください。今回の作業ではワールドをアップロードしていません。
 
-バッチでのシーン再生成は Unity の `-batchmode -projectPath <project> -executeMethod RoadsterValidation.BuildScene -quit -logFile <log>` で実行できます。画像を伴う検証は描画可能な Editor から `-executeMethod RoadsterValidation.Run -roadsterExit` を指定します。`-quit` を併用しないでください。
+`RoadsterValidation.BuildScene`は再生成した結果を保存済みの`DriveRoadster.unity`へ置き換える検証用入口です。手編集シーンを保存・保全してから実行してください。バッチでのシーン再生成はUnityの `-batchmode -projectPath <project> -executeMethod RoadsterValidation.BuildScene -quit -logFile <log>` で実行できます。画像を伴う検証は描画可能な Editor から `-executeMethod RoadsterValidation.Run -roadsterExit` を指定します。`-quit` を併用しないでください。
 
 ## ファイル構成
 
@@ -116,7 +141,7 @@ Unity Editor Play Mode / ClientSim。設計上の `CockpitEye_AuthoredReference`
 |---|---|
 | `Assets/DriveRoadster/Scripts/RoadsterVehicle.cs` | 乗降、所有権、車両物理、入力、スナップショット同期 |
 | `Assets/DriveRoadster/Scripts/RoadsterRun.cs` | ゲート判定、タイマー、失格、参考記録、HUD |
-| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | 乗車と5種の車内 Interact、押下演出 |
+| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | 乗車と7種の車内 Interact、押下演出 |
 | `Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs` | FBX と manifest からシーン・座席・HUD・LOD を生成 |
 | `Assets/DriveRoadster/Editor/RoadsterCockpitSetup.cs` | 生計器、ボタン、乗車表示、可動部ピボットを生成 |
 | `Assets/DriveRoadster/Editor/RoadsterThrusterSetup.cs` | ノズル参照と3層のParticleSystem・白煙材質を生成 |
@@ -144,19 +169,19 @@ Unity Editor Play Mode / ClientSim。設計上の `CockpitEye_AuthoredReference`
 | 接地判定 | 2 本以上のヒット。法線を平滑化して車体姿勢を追従 |
 | 地上 / 壁 | 上向き法線と世界上方向の内積が .65 未満なら壁モード |
 | 押し付け | 地上 9.81、壁 23 m/s²。横滑り速度へ減衰係数 6 |
-| 飛行 | 許可区間で非接地が .12 秒超。前進加速 8～18 m/s²、速度 28 m/s まで揚力増加 |
+| 飛行 | 許可区間で非接地が .12 秒超。入力による前進加速0～18 m/s²。Autoのみ速度28 m/sまで滑空揚力増加 |
 | 飛行上限 | 世界 Y=100 m 超で揚力 0。自動重力は無効、各モードで重力相当を明示適用 |
-| 復帰条件 | Y < −20 m または原点から 1,800 m 超。R / RESET でも復帰 |
+| 復帰条件 | Y < −20 m または原点から 1,800 m 超。Backspace / RESETでも復帰 |
 
-飛行許可範囲は中心 `(180,20,78)`、サイズ `(60,80,180)` m の軸平行ボックスです。範囲外へ出ると飛行許可を解除し、計測中なら失格になります。飛行の上下入力は下降補助のみで、自由な 6 軸飛行ではありません。
+飛行許可範囲は中心 `(180,20,78)`、サイズ `(60,80,180)` m の軸平行ボックスです。範囲外へ出ると飛行許可を解除し、計測中なら失格になります。AutoのJump上昇は最大24 m/s²の補助。Manualは独立3回転軸と前進推力／速度方向の制動を持ちますが、自由な6自由度の並進移動ではありません。
 
-モード値は `0` 待機、`1` 地上、`2` バンク/壁、`3` アシスト飛行、`4` 許可なしの空中です。地上の法線追従と飛行の水平復元は簡易アーケード物理であり、実車の性能モデルではありません。
+モード値は `0` 待機、`1` 地上、`2` バンク/壁、`3` 許可区間の飛行（Auto/Manual）、`4` 許可なしの空中です。地上の法線追従とAutoの水平復元は簡易アーケード物理であり、実車の性能モデルではありません。
 
 ## 同期と所有権
 
 - **owner だけが物理を計算**。非 owner の Rigidbody は kinematic で、受信位置・姿勢を補間します。owner の CCD は ContinuousDynamic、非 owner は ContinuousSpeculative です。
 - Vehicle と Run は同一 GameObject 上の Manual 同期です。`VRCObjectSync` は併用しません。運転中は .12 秒、無人時は 1 秒ごとに送信を要求します。これは要求周期であり、実送信間隔や帯域の保証ではありません。
-- 車両は driver ID、世代、モード、位置・回転・速度、reset sequence、7ノズルの噴射強度（2 int）、操舵／ペダル（1 int）、着陸テレメトリー（Vector3）を同期。受信側は速度から最大 .18 秒先まで外挿し、指数補間を適用します。最初の受信と reset sequence 変更時は即座に位置を合わせます。
+- 車両は driver ID、世代、モード、位置・回転・速度、reset sequence、7ノズルの噴射強度（2 int）、操舵／ペダル（1 int）、着陸テレメトリー（Vector3）、Auto/Manual・着陸補助の2 bool、操縦3軸（Vector3）、入力方式／中立待ち／握り状態（1 int）を同期。受信側は速度から最大 .18 秒先まで外挿し、指数補間を適用します。最初の受信と reset sequence 変更時は即座に位置を合わせます。
 - 乗車前に `IsNetworkSettled` を確認し、非 owner は初回スナップショットも待ちます。所有権要求後 .4 秒待ち、自分が owner かつ空席なら Station へ入ります。2 秒後も着座していなければ解放します。
 - owner を失った運転者は退出します。通常降車・driver の切断・無人時の自動所有権移譲では旧 run を取り消し、スタートへ復帰します。安全な退出先はパドック側の player spawn です。
 - .4 秒の待機は合意プロトコルではありません。同時乗車、遅延、途中参加、切断、所有権移譲のイベント順は **複数クライアント未検証** です。
@@ -173,7 +198,7 @@ Unity Editor Play Mode / ClientSim。設計上の `CockpitEye_AuthoredReference`
 | 1 | ACCEL | Ground | 加速直線 |
 | 2 | WALL_APEX | WallRide | バンク頂点を通過 |
 | 3 | LAUNCH | Ground | 飛行許可を有効化 |
-| 4–6 | AIR_01 / AIR_02 / AIR_03 | AssistedFlight | 空中リングの開口を通過 |
+| 4–6 | AIR_01 / AIR_02 / AIR_03 | AssistedFlight（mode 3、Auto/Manual共通） | 空中リングの開口を通過 |
 | 7 | LANDING | Ground | 飛行許可を解除 |
 | 8 | RETURN | Ground | 戻りカーブ |
 | 9 | FINISH | Ground | 完走して記録へ挿入 |
@@ -217,6 +242,7 @@ Windows の大文字小文字を区別しないファイルシステムでは `t
 
 ## 制作資料
 
+- [Meta Touch / OpenXR / Udon入力対応と検証](docs/INPUT_BINDINGS_META.ja.md)
 - [ワールド設計](docs/WORLD_DESIGN.ja.md) / [実装状態](docs/IMPLEMENTATION_STATUS.ja.md)
 - [映像観察と創作の区別](docs/VISUAL_REFERENCES.ja.md) / [公式資料](docs/REFERENCES.ja.md)
 - [Unity 引き継ぎ](docs/UNITY_HANDOFF.ja.md) / [保全と checkpoint](docs/CHECKPOINTS.ja.md)

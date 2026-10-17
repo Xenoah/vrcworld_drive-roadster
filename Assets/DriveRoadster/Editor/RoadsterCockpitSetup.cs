@@ -19,6 +19,7 @@ public static class RoadsterCockpitSetup
             vehicle.throttlePedals[i]=Pivot(car,models[i].transform,"Pedal_Throttle",i);
             vehicle.brakePedals[i]=Pivot(car,models[i].transform,"Pedal_Brake",i);
         }
+        vehicle.yokeAnchor=New("YokeGripAnchor",car,vehicle.yokes[0].localPosition,Quaternion.identity);
         var main=Panel("DriverInstruments",car,new Vector3(-.35f,.94f,.604f),Quaternion.identity,new Vector2(1080,380),.00052f);
         TextAt(main,"Brand","ASTERION   /   DRIVER",-500,156,1000,42,27,Muted);
         run.speedText=TextAt(main,"Speed","0",-495,24,340,150,130,Ice);
@@ -43,15 +44,18 @@ public static class RoadsterCockpitSetup
         }
         Vector3 controlsPosition=new Vector3(.12f,.765f,.10f);
         Quaternion facing=Quaternion.LookRotation(-(vehicle.cockpitEye.localPosition-controlsPosition).normalized,Vector3.up);
-        var controls=Panel("DriverControls",car,controlsPosition,facing,new Vector2(800,850),.00034f);
-        TextAt(controls,"Title","DRIVE CONTROLS",-365,385,730,48,34,Cyan);
-        run.feedbackText=TextAt(controls,"Feedback","READY",-365,290,730,120,27,Ice);
-        Button(controls,new Vector2(-185,145),new Vector2(330,105),"TIME ATTACK [T]",1,vehicle,run,false);
-        Button(controls,new Vector2(185,145),new Vector2(330,105),"RESET [R]",0,vehicle,run,false);
-        run.profileText=Button(controls,new Vector2(-185,5),new Vector2(330,105),"STEER / NORMAL [C]",3,vehicle,run,false);
-        Button(controls,new Vector2(185,5),new Vector2(330,105),"CONTROLS [H]",4,vehicle,run,false);
-        Button(controls,new Vector2(0,-135),new Vector2(700,105),"EXIT TO PADDOCK / JUMP / X",2,vehicle,run,true);
-        run.helpText=TextAt(controls,"Help","",-365,-305,730,205,25,Muted);
+        var controls=Panel("DriverControls",car,controlsPosition,facing,new Vector2(800,1100),.00034f);
+        TextAt(controls,"Title","DRIVE CONTROLS",-365,505,730,48,34,Cyan);
+        run.feedbackText=TextAt(controls,"Feedback","READY",-365,425,730,105,25,Ice);
+        run.pilotModeText=Button(controls,new Vector2(-185,315),new Vector2(330,90),"AUTO [F]",6,vehicle,run,false);
+        run.landingToggleText=Button(controls,new Vector2(185,315),new Vector2(330,90),"LANDING ON [L]",7,vehicle,run,false);
+        Button(controls,new Vector2(-185,200),new Vector2(330,90),"TIME ATTACK [T]",1,vehicle,run,false);
+        Button(controls,new Vector2(185,200),new Vector2(330,90),"RESET [BACKSPACE]",0,vehicle,run,false);
+        run.profileText=Button(controls,new Vector2(-185,85),new Vector2(330,90),"FEEL / NORMAL [C]",3,vehicle,run,false);
+        Button(controls,new Vector2(185,85),new Vector2(330,90),"CONTROLS [H]",4,vehicle,run,false);
+        Button(controls,new Vector2(0,-30),new Vector2(700,90),"EXIT TO PADDOCK [X]",2,vehicle,run,true);
+        run.inputText=TextAt(controls,"InputMethod","DESKTOP / KEYS",-365,-125,730,65,25,Cyan);
+        run.helpText=TextAt(controls,"Help","",-365,-340,730,340,24,Muted);
         var door=Panel("BoardingStatus",car,new Vector3(-1.10f,1.02f,-.12f),Quaternion.Euler(0,90,0),new Vector2(620,240),.00060f);
         vehicle.boardingDisplay=TextAt(door,"Status","DRIVER ACCESS",-285,0,570,220,28,Ice);
         var board=GameObject.CreatePrimitive(PrimitiveType.Cube);board.name="BoardDriverSeat";board.transform.SetParent(door,false);

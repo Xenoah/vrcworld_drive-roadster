@@ -17,23 +17,39 @@
 | 運転席ドア DRIVER ACCESS | Interactで乗車要求。空席／占有／同期待ち／要求中／失敗理由を表示 |
 | TIME ATTACK | `RoadsterRun.BeginRun()`。開始位置と速度の条件を検査 |
 | RESET | 走行中は確認を挟み、開始位置へ復帰して計測と入力を解除 |
-| STEER | ローカルの感度をNORMAL→DIRECT→COMFORT→NORMALで切替 |
+| FEEL | ローカルの感度をNORMAL→DIRECT→COMFORT→NORMALで切替 |
 | CONTROLS | ローカルの操作説明を開閉 |
 | EXIT TO PADDOCK | Stationを退出し、パドックへ移動 |
-| ヨーク／ペダル | 操舵／加速／制動入力に追従する見た目。掴む操作・手足トラッキングなし |
+| ヨーク／ペダル | ヨークはVR右グリップで取得する仮想操縦桿。ペダルは入力表示で足トラッキングなし |
+| AUTO / MANUAL | 空中の水平復帰／3軸角速度制御を切替 |
+| LANDING ON / OFF | モードと独立した着陸補助 |
 | ヨーク上の小キー、ベント、カップホルダー、ねじ、シートベルト部品 | 装飾。入力機能なし |
 
-5個の車内ボタンには物理BoxColliderと `RoadsterAction` がある。押下時はキャップとラベルが2.72 mm沈み、0.16秒後に戻る。Unity UIのクリックイベントには依存せず、VRChat Interactで処理する。乗車パネルには別の乗車用Interactを設ける。操作パネルは運転席方向を向き、物理的な台座の上へ配置する。
+7個の車内ボタンには物理BoxColliderと `RoadsterAction` がある。押下時はキャップとラベルが2.72 mm沈み、0.16秒後に戻る。Unity UIのクリックイベントには依存せず、VRChat Interactで処理する。乗車パネルには別の乗車用Interactを設ける。操作パネルは運転席方向を向き、物理的な台座の上へ配置する。
 
-## 入力と安全な退出
+## 入力・モード・安全な退出
 
-`InputMoveVertical`／`InputMoveHorizontal` はローカル運転者だけが受け取る。デッドゾーンd=.12で `sign(x) × clamp01((abs(x)-d)/(1-d))` へ変換。操舵はさらに絶対値の1.4乗と感度係数を掛ける。係数は COMFORT=.65、NORMAL=.85、DIRECT=1。操舵と正スロットルは毎秒6、負方向は毎秒10で目標値へ追従する。感度は入力だけを変え、姿勢補助／着陸の安全値は変更しない。
+操作表は[README](../README.md#操作)。Autoを標準とし、Manualと着陸補助を別々に切り替える。乗車時はAuto・着陸補助ON。Fがモード、Lが着陸、Backspaceが復帰、Xが降車。Rは標準Action Menuと競合させない。
 
-標準Desktopキーは W/S・A/D。Rはリセット、TはTA、Cは操舵感度、Hはヘルプ、Xは退出。VRは移動スティックとInteractを使用する。入力イベントはVRChatのリマップに従うため、[SDK Input Events](https://creators.vrchat.com/worlds/udon/input-events/) を参照。
+Desktopは移動軸のW/S・A/Dを使用する。Manualの空中ではW/Sをpitch、A/Dをyaw、Q/Eをroll、Spaceを前進推力、Shiftを速度方向の制動へ切替。地上に戻る際は中立復帰を要求し、押し続けたpitch入力が突然アクセルにならないようにする。
 
-`VRCStation.disableStationExit=true` とし、前後左右の入力による自動退出を防ぐ。`InputJump(true)` は `ExitVehicle()` → `ExitStation()` を呼ぶ。EXITボタンとDesktop Xも同じ経路。これは [VRCStationの仕様](https://creators.vrchat.com/worlds/components/vrc_station/) に基づく。通常移動による退出を無効にしたまま、明示的な退出経路を必ず残す。
+VRは`InputUse(bool, UdonInputEventArgs)`の`handType`で右／左を分ける。右＝アクセル／前進推力、左＝制動。連続アナログ圧力ではない。左スティックは横だけを操舵／yawに使用し、縦は未使用。Look系イベントを取得しないので、右スティック旋回をpitch/rollへ転用しない。実リマップ・全機種対応は未検証。
 
-速度2 m/s超では RESET 初回で「2秒以内にもう一度」を表示。再操作で復帰し、停止中は即時復帰。乗車／降車／復帰で生入力と平滑化後の入力をゼロにする。ボタンの運転者ガードと既存の owner ガードを維持する。Jump／EXIT はリセット確認を要求しない。
+右グリップ（`InputGrab`）をヨーク中心から0.32 m以内で押すと取得する。取得時は両トリガーを解放している必要がある。取得時の車体ローカル右手回転を記憶し、`GetTrackingData(RightHand)`の車体ローカル相対回転からpitch／rollを取り出す。35度でフル入力、yaw成分は使用しない。手のworld回転をそのまま使わないため、車体の回転を手の操作と取り違えない。右グリップ解放、Drop、中心から0.55 m超、パネル操作でヨークを解除する。
+
+VRの加速・操舵・Auto Jumpはヨーク保持中のみ有効。ブレーキはヨークを離しても入力可能だが、中立待ち中は全操作を解除する。右手をパネルへ移して押したUseで加速しない。全パネルInteractは自身の処理より先に操縦を解除する。再取得には右トリガーの解放を要求し、保持済みアクセルを再使用しない。
+
+デッドゾーンd=.12で`sign(x)*clamp01((abs(x)-d)/(1-d))`。yaw／操舵はカーブ指数1.4、感度はCOMFORT=.65、NORMAL=.85、DIRECT=1。pitch／rollも同じ感度係数を使用。立上り／解除は毎秒6、制動側は毎秒10。制動開始時には正の推力を即ゼロにし、同時トリガーは必ず制動優先。安全境界での解除は平滑化を待たずゼロにする。
+
+Autoは姿勢誤差による水平復帰と角速度減衰。Manualは`(commandedLocalRate - actualLocalAngularVelocity)*4.5`を用い、最大角速度要求1.5 rad/s、角加速度上限10 rad/s²。無入力では回転を止めるが、その傾きを水平には戻さない。着陸補助は独立した力であり、Manualへ水平復帰トルクを追加しない。
+
+乗車・リセット・パネル・モード切替・Manual地空切替・所有権通知・入力方式系統変更・休止・0.5秒を超える処理中断で出力をゼロにし、中立を0.15秒観測して再開する。押下状態は境界をまたいで覚え、押しっぱなしを中立と誤認しない。KeyboardとMouse間の通常切替だけでは解除しない。SDKメニューのfalse／zero入力も受け取る。
+
+`Application.isFocused`はSDK3.10.5のUdon非公開APIであり採用していない。実OSフォーカス喪失、SteamVRダッシュボード、トラッキング喪失による解除通知は未検証。ClientSim試験ではSDK休止、解除イベント列、処理中断判定の分岐を区別して扱う。
+
+Stationは`ImmobilizeForVehicle`と`disableStationExit=true`。Jumpは操縦専用で、長押しによる退出も実装しない。X／EXIT→`ExitStation`→パドックへ移動し、入力とrunを解除する。走行中のRESETのみ2秒以内の二度押しを要求する。
+
+公式Meta/OpenXRとUdonの割当境界、ローカルランタイム確認、左右ボタンの追加試験は[Meta入力バインド資料](INPUT_BINDINGS_META.ja.md)を参照。
 
 ## 生計器
 
@@ -43,14 +59,16 @@
 |---|---|
 | km/h | ownerのRigidbody速度、非ownerは受信netVelocity。大きさ×3.6 |
 | PARKED / ROAD / WALL・BANK / FLIGHT / AIRBORNE | 実際のmotionMode 0–4 |
-| DRIVE / BRAKE / REVERSE、百分率 | 整形済みペダル入力。負方向は BRAKE / REV と併記 |
+| THRUST / BRAKE、百分率 | 整形済みペダル入力。Desktop地上のSは停止後に後退し、VR制動は後退しない |
 | LAP 1/1、秒、CP、BEST | 実行中run、サーバー時刻、順序ゲート、ローカルPB |
 | PITCH / ROLL、水平線 | 車体Transformの姿勢。HMD姿勢ではない |
 | H、DOWN、LANDING | Raycastの路面距離、接近速度、着陸補助加速度。未検出の高さは -- |
 | FL/FR/RL/RR/L/R/PUSH | 四隅の下向き、左右、後方推進の7噴射要求。燃料量／推力測定ではない |
+| AUTO / MANUAL、LANDING ON / OFF | 独立した操縦・着陸補助の同期状態 |
+| DESKTOP / KEYS、VR / TRIGGER BUTTONS + YOKE | 実際に選択した入力分岐。SDK入力方式も併記 |
 | 状態メッセージ | 所有権要求、占有、操作結果、TA失格理由 |
 
-表示用の操舵とペダルを各signed 8 bit相当へ量子化して1 intへ詰め、路面距離／接近速度／補助加速度をVector3にして既存Manualスナップショットに追加。生フィールド容量は計16 byte増加するが、Udonの実送信bytesや帯域を実測した値ではない。遠隔側は受信値から可動部と計器を描画し、物理力を加えない。初回受信、途中参加、所有権変更、遅延下の見え方は複数クライアントで要検証。
+表示用の操舵とペダルを各signed 8 bit相当へ量子化して1 intへ詰め、路面距離／接近速度／補助加速度をVector3にして既存Manualスナップショットに追加。これらに加えて操縦モード・着陸補助の2 bool、操縦3軸のVector3、入力状態のintを同期する。実通信量は未測定で、Udonの実送信bytesや帯域を実測した値ではない。遠隔側は受信値から可動部と計器を描画し、物理力を加えない。初回受信、途中参加、所有権変更、遅延下の見え方は複数クライアントで要検証。
 
 ## 座席と画像の扱い
 
@@ -64,3 +82,7 @@
 いずれも実Unity Editor Play Mode / ClientSimのGame View。スクリプト入力・区間配置・検証用カメラを使用した。実VRChatクライアント、HMD、自然な手動走行の記録ではない。画面外の幾何や照明を画像加工で補完していない。
 
 残る受入試験は、各アバター／HMDの頭位置とヨークの干渉、パネルへの実Interact到達性、物理キーとコントローラーのリマップ、VR酔い、複数クライアントでの状態表示と同時乗車。ClientSimの占有拒否テストはdriverIdへ別IDを設定した単一クライアントの分岐確認であり、実際の競合試験ではない。
+
+## 追加の実行画像
+
+[Manual Desktop](images/clientsim-manual-desktop.png) / [合成VR入力](images/clientsim-manual-vr-inputs.png) / [モード・着陸パネル](images/clientsim-pilot-mode-panel.png)。すべてUnity Editor Play Mode / ClientSimのGame View。VR識別・右手姿勢はEditor限定フィクスチャで、実HMD操作の証拠ではない。

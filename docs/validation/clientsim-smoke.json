@@ -1,8 +1,8 @@
 {
-    "utc": "2026-10-17T08:22:24.2493624Z",
+    "utc": "2026-10-17T10:36:45.3369859Z",
     "unity": "2022.3.22f1",
     "sdk": "3.10.5",
-    "environment": "Unity Editor Play Mode / ClientSim / one local simulated player / scripted SDK input events and section placements",
+    "environment": "Unity Editor Play Mode / ClientSim / one local simulated player / scripted SDK events, desktop key-state adapter samples, synthetic VR identity and right-hand tracking fixture / no physical keyboard or HMD input",
     "gpu": "NVIDIA GeForce RTX 3070",
     "cpu": "AMD Ryzen 9 5950X 16-Core Processor ",
     "checks": [
@@ -59,12 +59,12 @@
         {
             "name": "Banked section contact",
             "passed": true,
-            "detail": "position=(102.004, 7.414, 339.210); speed=14.254; mode=2; modeMask=22; scripted placement at 72 degree bank"
+            "detail": "position=(101.743, 7.401, 339.243); speed=13.941; mode=2; modeMask=22; scripted placement at 72 degree bank"
         },
         {
             "name": "Free drive launch gate and assisted flight",
             "passed": true,
-            "detail": "position=(180.000, 17.843, 80.247); speed=52.223; mode=3; modeMask=26"
+            "detail": "position=(180.000, 17.532, 82.973); speed=50.755; mode=3; modeMask=26"
         },
         {
             "name": "Discontinuity invalidates run",
@@ -74,12 +74,12 @@
         {
             "name": "Nozzle demand follows correction moment",
             "passed": true,
-            "detail": "torque=(-1.344, 0.000, 2.546); down jets=0.02474776,0.3811896,0,0.1930749,2.384186E-08,0,0"
+            "detail": "torque=(-1.205, 0.000, 2.284); down jets=0.02219623,0.3418884,0,0.1731685,0,5.960465E-09,0"
         },
         {
             "name": "Nozzle exhaust follows body orientation",
             "passed": true,
-            "detail": "world downward angle=37.12"
+            "detail": "world downward angle=36.52"
         },
         {
             "name": "All seven exhaust directions oppose modeled force",
@@ -89,7 +89,7 @@
         {
             "name": "Air attitude error converges",
             "passed": true,
-            "detail": "initial=41.458; after 0.9 s=6.855"
+            "detail": "initial=41.458; after 0.9 s=6.481"
         },
         {
             "name": "Angular velocity damping",
@@ -124,7 +124,7 @@
         {
             "name": "Horizontal momentum retained",
             "passed": true,
-            "detail": "initial=12; after landing=11.138 m/s"
+            "detail": "initial=12; after landing=11.144 m/s"
         },
         {
             "name": "Postcontact rebound bounded",
@@ -144,7 +144,7 @@
         {
             "name": "Assisted flight settles on temporary flat test pad",
             "passed": true,
-            "detail": "initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 122.734); speed=33.282; mode=1"
+            "detail": "initial clearance=3 m; closing=2 m/s; forward=28 m/s; after 2.6 s: position=(180.000, 19.965, 101.586); speed=20.821; mode=1"
         },
         {
             "name": "Cockpit moving parts wired across LODs",
@@ -154,7 +154,7 @@
         {
             "name": "Movement exit disabled with explicit escape",
             "passed": true,
-            "detail": "mapped Jump and EXIT use ExitStation"
+            "detail": "X and EXIT use ExitStation; Jump is flight control"
         },
         {
             "name": "Occupied boarding feedback",
@@ -179,7 +179,7 @@
         {
             "name": "Live speed and road mode instruments",
             "passed": true,
-            "detail": "display=37 km/h; physics=36.92"
+            "detail": "display=43 km/h; physics=48.54"
         },
         {
             "name": "Yoke and throttle pedal follow input",
@@ -214,7 +214,7 @@
         {
             "name": "Flight and thruster cockpit telemetry",
             "passed": true,
-            "detail": "ATTITUDE HOLD  ACTIVE\nLANDING  ARMED"
+            "detail": "AUTO / LEVEL ASSIST\nLANDING  ARMED"
         },
         {
             "name": "Help control changes live panel",
@@ -222,7 +222,12 @@
             "detail": "help hidden via physical panel Interact"
         },
         {
-            "name": "Mapped Jump exits safely to paddock",
+            "name": "Jump no longer exits the driver seat",
+            "passed": true,
+            "detail": "Jump is now a pilot input"
+        },
+        {
+            "name": "Explicit EXIT safely returns to paddock",
             "passed": true,
             "detail": "player=(48.00, 0.00, 6.00); exit=(48.00, 1.00, 6.00)"
         },
@@ -232,9 +237,214 @@
             "detail": "DRIVER ACCESS / AVAILABLE\nSAFE EXIT / PADDOCK\nINTERACT / REQUEST SEAT"
         },
         {
+            "name": "Boarding defaults to Auto and landing assist",
+            "passed": true,
+            "detail": "new driver defaults"
+        },
+        {
+            "name": "Manual neutral preserves tilt with landing assist on",
+            "passed": true,
+            "detail": "orientation delta=0"
+        },
+        {
+            "name": "Manual neutral damps angular velocity",
+            "passed": true,
+            "detail": "initial=1.972; final=0.1917238"
+        },
+        {
+            "name": "Manual pitch isolated",
+            "passed": true,
+            "detail": "SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(0.100, 0.000, 0.000)"
+        },
+        {
+            "name": "Manual yaw isolated",
+            "passed": true,
+            "detail": "SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(0.000, 0.100, 0.000)"
+        },
+        {
+            "name": "Manual roll isolated",
+            "passed": true,
+            "detail": "SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(0.000, 0.000, -0.100)"
+        },
+        {
+            "name": "Manual three axes simultaneous",
+            "passed": true,
+            "detail": "SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R=(-0.100, -0.100, 0.100)"
+        },
+        {
+            "name": "Manual Space supplies forward thrust",
+            "passed": true,
+            "detail": "Space adapter -> thrust=0.1"
+        },
+        {
+            "name": "Desktop Shift overrides held thrust",
+            "passed": true,
+            "detail": "throttle=-0.1666667"
+        },
+        {
+            "name": "Mode change clears and blocks held controls",
+            "passed": true,
+            "detail": "held inputs require neutral"
+        },
+        {
+            "name": "VR input method selected by SDK hook",
+            "passed": true,
+            "detail": "synthetic ClientSim VR identity; no HMD"
+        },
+        {
+            "name": "Unheld yoke blocks right trigger and stick Y",
+            "passed": true,
+            "detail": "no throttle from left stick Y or panel trigger"
+        },
+        {
+            "name": "Left grip is neither yoke nor index brake",
+            "passed": true,
+            "detail": "InputGrab LEFT is separate from InputUse LEFT"
+        },
+        {
+            "name": "Yoke grip outside reach is rejected",
+            "passed": true,
+            "detail": "synthetic hand 1 m from anchor"
+        },
+        {
+            "name": "Right grip acquires nearby yoke",
+            "passed": true,
+            "detail": "InputGrab RIGHT, separate from InputUse"
+        },
+        {
+            "name": "Right grip does not become accelerator",
+            "passed": true,
+            "detail": "grip acquires pose control only"
+        },
+        {
+            "name": "Right index button ramps forward thrust",
+            "passed": true,
+            "detail": "binary Use -> smoothed throttle=1"
+        },
+        {
+            "name": "Both index triggers prioritize brake immediately",
+            "passed": true,
+            "detail": "right+left held; throttle=-0.1666667"
+        },
+        {
+            "name": "Left index button ramps braking",
+            "passed": true,
+            "detail": "throttle=-1"
+        },
+        {
+            "name": "Right trigger release preserves left brake",
+            "passed": true,
+            "detail": "independent right release with left held"
+        },
+        {
+            "name": "Left trigger release preserves right request",
+            "passed": true,
+            "detail": "independent left release; smooth output crosses neutral over time"
+        },
+        {
+            "name": "Trigger release returns to zero",
+            "passed": true,
+            "detail": "zero after smooth release"
+        },
+        {
+            "name": "VR yoke pitch isolated",
+            "passed": true,
+            "detail": "synthetic right-hand pitch 22 degrees"
+        },
+        {
+            "name": "VR yoke roll isolated",
+            "passed": true,
+            "detail": "synthetic right-hand roll 25 degrees"
+        },
+        {
+            "name": "VR left stick yaw isolated",
+            "passed": true,
+            "detail": "Look inputs unused; yaw from MoveHorizontal"
+        },
+        {
+            "name": "VR left stick vertical is unused",
+            "passed": true,
+            "detail": "MoveVertical=1 with no index trigger"
+        },
+        {
+            "name": "VR three axes plus thrust simultaneous",
+            "passed": true,
+            "detail": "P/Y/R=(0.38, 0.36, 0.55)"
+        },
+        {
+            "name": "Panel Interact disarms held trigger",
+            "passed": true,
+            "detail": "panel disarms before action"
+        },
+        {
+            "name": "Releasing yoke cuts held acceleration",
+            "passed": true,
+            "detail": "right Use remains held while grip releases"
+        },
+        {
+            "name": "Held accelerator cannot reacquire yoke",
+            "passed": true,
+            "detail": "release index trigger before regripping"
+        },
+        {
+            "name": "SDK menu-style releases clear VR propulsion",
+            "passed": true,
+            "detail": "synthetic release events; not real menu or focus actuation"
+        },
+        {
+            "name": "SDK suspension clears held controls",
+            "passed": true,
+            "detail": "ClientSim isSuspended=true, real Udon branch"
+        },
+        {
+            "name": "Resume waits for neutral",
+            "passed": true,
+            "detail": "held index/grip do not rearm"
+        },
+        {
+            "name": "Long frame gap disarms controls",
+            "passed": true,
+            "detail": "synthetic 0.7 s clock gap; no OS focus API"
+        },
+        {
+            "name": "Ownership callback clears controls",
+            "passed": true,
+            "detail": "single-client callback branch; not network transfer"
+        },
+        {
+            "name": "Input family change clears VR state",
+            "passed": true,
+            "detail": "VR fixture restored to ClientSim desktop"
+        },
+        {
+            "name": "Landing switch independent of Manual",
+            "passed": true,
+            "detail": "Manual stays selected; landing OFF"
+        },
+        {
+            "name": "Auto Jump supplies permitted lift without exiting",
+            "passed": true,
+            "detail": "height delta=-0.4366226; vy=2.024003"
+        },
+        {
+            "name": "Jump cannot bypass flight permission",
+            "passed": true,
+            "detail": "permission removed; no applied lift or lift exhaust"
+        },
+        {
+            "name": "Crossing flight envelope revokes permission",
+            "passed": true,
+            "detail": "x=211 beyond permitted max x=210"
+        },
+        {
+            "name": "EXIT survives driver authority mismatch",
+            "passed": true,
+            "detail": "simulated driverId disagreement; local ExitStation still available"
+        },
+        {
             "name": "Particle budget respected",
             "passed": true,
-            "detail": "whole-run peak=477; configured cap=1280"
+            "detail": "whole-run peak=447; configured cap=1280"
         },
         {
             "name": "Station exit releases driver",
@@ -244,62 +454,77 @@
         {
             "name": "Capture clientsim-free-drive.png",
             "passed": true,
-            "detail": "218894 bytes"
+            "detail": "223169 bytes"
         },
         {
             "name": "Capture clientsim-time-attack.png",
             "passed": true,
-            "detail": "219753 bytes"
+            "detail": "218523 bytes"
         },
         {
             "name": "Capture clientsim-bank-section.png",
             "passed": true,
-            "detail": "322197 bytes"
+            "detail": "322880 bytes"
         },
         {
             "name": "Capture clientsim-assisted-flight.png",
             "passed": true,
-            "detail": "440157 bytes"
+            "detail": "427466 bytes"
         },
         {
             "name": "Capture clientsim-thruster-attitude.png",
             "passed": true,
-            "detail": "290686 bytes"
+            "detail": "302546 bytes"
         },
         {
             "name": "Capture clientsim-thruster-approach.png",
             "passed": true,
-            "detail": "261419 bytes"
+            "detail": "266709 bytes"
         },
         {
             "name": "Capture clientsim-thruster-touchdown.png",
             "passed": true,
-            "detail": "262680 bytes"
+            "detail": "267502 bytes"
         },
         {
             "name": "Capture clientsim-thruster-residual.png",
             "passed": true,
-            "detail": "264602 bytes"
+            "detail": "264016 bytes"
         },
         {
             "name": "Capture clientsim-cockpit-driving.png",
             "passed": true,
-            "detail": "509890 bytes"
+            "detail": "518406 bytes"
         },
         {
             "name": "Capture clientsim-cockpit-flight.png",
             "passed": true,
-            "detail": "619177 bytes"
+            "detail": "629101 bytes"
         },
         {
             "name": "Capture clientsim-cockpit-controls.png",
             "passed": true,
-            "detail": "439725 bytes"
+            "detail": "488486 bytes"
         },
         {
             "name": "Capture clientsim-cockpit-boarding.png",
             "passed": true,
-            "detail": "336364 bytes"
+            "detail": "337527 bytes"
+        },
+        {
+            "name": "Capture clientsim-manual-desktop.png",
+            "passed": true,
+            "detail": "641786 bytes"
+        },
+        {
+            "name": "Capture clientsim-manual-vr-inputs.png",
+            "passed": true,
+            "detail": "610057 bytes"
+        },
+        {
+            "name": "Capture clientsim-pilot-mode-panel.png",
+            "passed": true,
+            "detail": "489626 bytes"
         },
         {
             "name": "No runtime errors",
@@ -319,6 +544,9 @@
         "docs/images/clientsim-cockpit-driving.png",
         "docs/images/clientsim-cockpit-flight.png",
         "docs/images/clientsim-cockpit-controls.png",
-        "docs/images/clientsim-cockpit-boarding.png"
+        "docs/images/clientsim-cockpit-boarding.png",
+        "docs/images/clientsim-manual-desktop.png",
+        "docs/images/clientsim-manual-vr-inputs.png",
+        "docs/images/clientsim-pilot-mode-panel.png"
     ]
 }

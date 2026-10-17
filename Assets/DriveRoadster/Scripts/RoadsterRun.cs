@@ -15,6 +15,7 @@ public class RoadsterRun : UdonSharpBehaviour
     public UnityEngine.UI.Text display;
     public UnityEngine.UI.Text cockpitDisplay;
     public UnityEngine.UI.Text speedText, modeText, driveText, lapText, systemText, attitudeText, feedbackText, helpText, profileText;
+    public UnityEngine.UI.Text pilotModeText, landingToggleText, inputText;
     public UnityEngine.UI.Image[] thrusterBars;
     public RectTransform attitudeLine;
     public string courseVersion = "coast-v1";
@@ -158,11 +159,11 @@ public class RoadsterRun : UdonSharpBehaviour
         speedText.text=speed.ToString("F0"); modeText.text=modeName;
         modeText.color=mode>=3 ? new Color(.35f,.8f,1f) : mode==2 ? new Color(1f,.73f,.25f) : new Color(.55f,1f,.78f);
         float pedal=vehicle.GetDisplayThrottle();
-        driveText.text=(pedal<-.05f ? "BRAKE / REV" : "DRIVE")+"  "+Mathf.RoundToInt(Mathf.Abs(pedal)*100)+"%";
+        driveText.text=(pedal<-.05f ? "BRAKE" : "THRUST")+"  "+Mathf.RoundToInt(Mathf.Abs(pedal)*100)+"%";
         lapText.text=(running ? "LAP 1 / 1   " : "FREE DRIVE   ")+elapsed.ToString("F2")+" s\nCP "+nextGate+" / "+gates.Length+"    BEST "+(personalBest>0 ? personalBest.ToString("F2")+" s" : "--");
         Vector3 landing=vehicle.GetLandingTelemetry();
-        string landingState=mode<3 ? "LANDING  STANDBY" : landing.z>.5f ? "LANDING  BRAKING "+landing.z.ToString("F1") : "LANDING  ARMED";
-        systemText.text=(mode>=3 ? "ATTITUDE HOLD  ACTIVE" : "ATTITUDE HOLD  STANDBY")+"\n"+landingState;
+        string landingState=!vehicle.landingAssistEnabled ? "LANDING  OFF" : mode<3 ? "LANDING  STANDBY" : landing.z>.5f ? "LANDING  BRAKING "+landing.z.ToString("F1") : Vector3.Dot(transform.up,Vector3.up)<.35f ? "LANDING  CHECK ATTITUDE" : "LANDING  ARMED";
+        systemText.text=(vehicle.manualFlight ? "MANUAL / RATE DAMPING" : "AUTO / LEVEL ASSIST")+"\n"+landingState;
         float pitch=Mathf.Asin(Mathf.Clamp(transform.forward.y,-1f,1f))*Mathf.Rad2Deg;
         float roll=Mathf.Atan2(transform.right.y,transform.up.y)*Mathf.Rad2Deg;
         attitudeText.text="PITCH "+pitch.ToString("F0")+"  ROLL "+roll.ToString("F0")+"\nH "+(landing.x<0 ? "--" : landing.x.ToString("F1"))+" m  DOWN "+landing.y.ToString("F1")+" m/s";
@@ -176,8 +177,13 @@ public class RoadsterRun : UdonSharpBehaviour
         feedbackText.text=vehicle.GetControlMessage();
         if (running) feedbackText.text+="\n"+status;
         else if (status.StartsWith("INVALID") || status.StartsWith("Stop") || status.StartsWith("FINISH")) feedbackText.text+="\n"+status;
-        profileText.text="STEER / "+vehicle.GetProfileName()+" [C]";
-        helpText.text=vehicle.showControlHelp ? "DESKTOP  W/S: throttle + brake/reverse\nA/D: steer   R: reset   T: time attack\nVR  MOVE STICK: drive / steer\nINTERACT: buttons   JUMP / X: safe exit\nC: steering feel   H: show/hide help" : "HELP H / INTERACT TO SHOW CONTROLS\nEXIT always returns to the paddock";
+        profileText.text="FEEL / "+vehicle.GetProfileName()+" [C]";
+        if(Utilities.IsValid(pilotModeText)) pilotModeText.text=(vehicle.manualFlight ? "MANUAL" : "AUTO")+" [F]";
+        if(Utilities.IsValid(landingToggleText)) landingToggleText.text="LANDING "+(vehicle.landingAssistEnabled ? "ON" : "OFF")+" [L]";
+        if(Utilities.IsValid(inputText)) inputText.text=vehicle.GetInputName()+"\n"+vehicle.GetInputMethodName();
+        bool vr=vehicle.GetInputName().StartsWith("VR");
+        string help=vr ? "RIGHT GRIP: hold yoke near wheel\nR INDEX: thrust  L INDEX: brake\nLEFT X: yaw / steer  LEFT Y: unused\nMANUAL AIR: yoke pitch / roll\nAUTO: Jump lift in flight zone\nRelease grip before using panel" : "GROUND: W/S drive  A/D steer\nAUTO AIR: W/S thrust/brake  A/D yaw\nAUTO: Space lift in flight zone\nMANUAL AIR: W/S pitch  A/D yaw\nQ/E roll  Space thrust  Shift brake\nF mode  L landing  Backspace reset";
+        helpText.text=vehicle.showControlHelp ? help+"\nT time attack  X EXIT  H help\nRelease inputs after mode / reset" : "HELP H / INTERACT TO SHOW CONTROLS\nEXIT always returns to the paddock";
     }
 
 }

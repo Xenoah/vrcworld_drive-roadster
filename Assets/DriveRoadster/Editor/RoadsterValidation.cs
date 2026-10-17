@@ -23,7 +23,7 @@ public static class RoadsterValidation
     [Serializable] public class CheckResult { public string name; public bool passed; public string detail; }
     [Serializable] public class Report
     {
-        public string utc, unity, sdk = "3.10.5", environment = "Unity Editor Play Mode / ClientSim / one local simulated player / scripted SDK input events and section placements";
+        public string utc, unity, sdk = "3.10.5", environment = "Unity Editor Play Mode / ClientSim / one local simulated player / scripted SDK events, desktop key-state adapter samples, synthetic VR identity and right-hand tracking fixture / no physical keyboard or HMD input";
         public string gpu, cpu;
         public List<CheckResult> checks = new List<CheckResult>();
         public List<string> captures = new List<string>();
@@ -37,6 +37,14 @@ public static class RoadsterValidation
     static int cockpitCameraMode;
     static float next;
     static bool scheduled;
+    static bool deferredMove;
+    static bool capturePending, thrustAfterArm, gapSample, boundsSample;
+    static float deferredVertical, deferredHorizontal;
+    static Delegate originalTracking, originalVR;
+    static bool fixtureVR;
+    static Quaternion fixtureHandRotation=Quaternion.identity;
+    static Vector3 fixtureHandOffset;
+    static Quaternion manualInitialRotation;
     static Vector3 start;
     static int modeMask;
     static float initialTilt, baselineImpact, assistedImpact, reboundPeak, brakeHeight, mistHeight;
@@ -56,6 +64,14 @@ public static class RoadsterValidation
     public static void BuildScene()
     {
         BuildRoadsterWorld.Build();
+        string generated=EditorSceneManager.GetActiveScene().path;
+        const string canonical="Assets/DriveRoadster/Scenes/DriveRoadster.unity";
+        if(generated!=canonical)
+        {
+            if(!generated.StartsWith("Assets/DriveRoadster/Scenes/DriveRoadster")) throw new InvalidOperationException("Unexpected generated scene path");
+            if(!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(),canonical)) throw new IOException("Canonical scene save failed");
+            AssetDatabase.DeleteAsset(generated);
+        }
         UdonSharpCompilerV1.CompileSync();
         AssetDatabase.SaveAssets();
         Debug.Log("ROADSTER_BUILD_COMPLETE");
@@ -96,9 +112,11 @@ public static class RoadsterValidation
             errors.Clear(); Application.logMessageReceived += Log;
             Application.runInBackground = true;
             stage = 0; cockpitCameraMode=0; particlePeak = 0; next = Time.time + 6f; scheduled = true;
+            capturePending=false;thrustAfterArm=false;gapSample=false;boundsSample=false;deferredMove=false;
         }
         if (state == PlayModeStateChange.EnteredEditMode)
         {
+            RestoreInputFixture();
             Application.logMessageReceived -= Log;
             SessionState.SetBool(Active, false); scheduled = false;
             if (Environment.GetCommandLineArgs().Length > 0 && Array.IndexOf(Environment.GetCommandLineArgs(), "-roadsterExit") >= 0)
@@ -114,8 +132,68 @@ public static class RoadsterValidation
     static void Event(UdonBehaviour u, string name) { u.SendCustomEvent(name); }
     static void Input(float throttle, float steering = 0f)
     {
+        deferredMove=false;
+        if(vehicle!=null && !V<bool>(vehicle,"inputArmed") && (Mathf.Abs(throttle)>.001f || Mathf.Abs(steering)>.001f))
+        {
+            SendMove(0,0); deferredVertical=throttle;deferredHorizontal=steering;deferredMove=true;return;
+        }
+        SendMove(throttle,steering);
+    }
+    static void SendMove(float throttle,float steering)
+    {
         UdonManager.Instance.RunInputAction(UdonManager.UDON_MOVE_VERTICAL,new UdonInputEventArgs(throttle,HandType.LEFT));
         UdonManager.Instance.RunInputAction(UdonManager.UDON_MOVE_HORIZONTAL,new UdonInputEventArgs(steering,HandType.LEFT));
+    }
+    static void Button(string name,bool value,HandType hand=HandType.RIGHT)
+    { UdonManager.Instance.RunInputAction(name,new UdonInputEventArgs(value,hand)); }
+    static void Neutral()
+    {
+        deferredMove=false;SendMove(0,0);
+        Button(UdonManager.UDON_INPUT_USE,false);Button(UdonManager.UDON_INPUT_USE,false,HandType.LEFT);
+        Button(UdonManager.UDON_INPUT_GRAB,false);Button(UdonManager.UDON_INPUT_JUMP,false);
+        vehicle.SetProgramVariable("desktopRoll",0f);vehicle.SetProgramVariable("desktopBrake",false);
+    }
+    static void ArmSample()
+    {
+        Neutral();Event(vehicle,"SuspendForPanel");
+        vehicle.SetProgramVariable("neutralSince",Time.time-.2f);Event(vehicle,"ProcessPilotInput");
+    }
+    static void SampleAxis(string label,float vertical,float horizontal,float roll,bool thrust,bool brake,Vector3 expectedSigns)
+    {
+        ArmSample();SendMove(vertical,horizontal);
+        // Hardware polling is outside this fixture: these are desktop key-state adapter samples.
+        vehicle.SetProgramVariable("desktopRoll",roll);vehicle.SetProgramVariable("desktopBrake",brake);
+        Button(UdonManager.UDON_INPUT_JUMP,thrust);Event(vehicle,"ProcessPilotInput");
+        Vector3 actual=new Vector3(V<float>(vehicle,"pitchInput"),V<float>(vehicle,"steering"),V<float>(vehicle,"rollInput"));
+        bool ok=true;for(int k=0;k<3;k++) ok&=expectedSigns[k]==0 ? Mathf.Abs(actual[k])<.001f : actual[k]*expectedSigns[k]>.01f;
+        Check(label,ok,"SDK movement/Jump + synthetic Q/E/Shift adapter sample; P/Y/R="+actual.ToString("F3"));
+    }
+    static VRCPlayerApi.TrackingData FixtureTracking(VRCPlayerApi player,VRCPlayerApi.TrackingDataType type)
+    {
+        if(fixtureVR && player.isLocal && type==VRCPlayerApi.TrackingDataType.RightHand)
+            return new VRCPlayerApi.TrackingData(V<Transform>(vehicle,"yokeAnchor").position+body.transform.TransformDirection(fixtureHandOffset),body.rotation*fixtureHandRotation);
+        return (VRCPlayerApi.TrackingData)originalTracking.DynamicInvoke(player,type);
+    }
+    static bool FixtureIsVR(VRCPlayerApi player)
+    { return fixtureVR && player.isLocal || (bool)originalVR.DynamicInvoke(player); }
+    static void InstallInputFixture()
+    {
+        var flags=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public;
+        var local=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic;
+        var tracking=typeof(VRCPlayerApi).GetField("_GetTrackingData",flags);
+        var vr=typeof(VRCPlayerApi).GetField("_IsUserInVR",flags);
+        originalTracking=(Delegate)tracking.GetValue(null);originalVR=(Delegate)vr.GetValue(null);
+        tracking.SetValue(null,Delegate.CreateDelegate(tracking.FieldType,typeof(RoadsterValidation).GetMethod("FixtureTracking",local)));
+        vr.SetValue(null,Delegate.CreateDelegate(vr.FieldType,typeof(RoadsterValidation).GetMethod("FixtureIsVR",local)));
+        fixtureVR=true;fixtureHandRotation=Quaternion.identity;fixtureHandOffset=Vector3.zero;
+        UdonManager.Instance.RunEvent(UdonManager.UDON_EVENT_ONINPUTMETHODCHANGED,("inputMethod",VRCInputMethod.SteamVR2));
+    }
+    static void RestoreInputFixture()
+    {
+        var flags=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public;
+        if(originalTracking!=null)typeof(VRCPlayerApi).GetField("_GetTrackingData",flags).SetValue(null,originalTracking);
+        if(originalVR!=null)typeof(VRCPlayerApi).GetField("_IsUserInVR",flags).SetValue(null,originalVR);
+        originalTracking=null;originalVR=null;fixtureVR=false;
     }
     static UdonBehaviour Action(int code)
     {
@@ -140,11 +218,20 @@ public static class RoadsterValidation
         ScreenCapture.CaptureScreenshot(Path.GetFullPath(path));
         report.captures.Add(path);
     }
+    static bool CaptureBeforeChange(string name)
+    {
+        if(capturePending) { capturePending=false;return false; }
+        Capture(name);capturePending=true;stage--;next=Time.time+.15f;return true;
+    }
     static void Tick()
     {
         if (!scheduled || !EditorApplication.isPlaying || report == null) return;
         try
         {
+            if(deferredMove && vehicle!=null && V<bool>(vehicle,"inputArmed"))
+            { deferredMove=false;SendMove(deferredVertical,deferredHorizontal); }
+            if(thrustAfterArm && vehicle!=null && V<bool>(vehicle,"inputArmed"))
+            { thrustAfterArm=false;Button(UdonManager.UDON_INPUT_JUMP,true); }
             if (body != null)
             {
                 modeMask |= 1 << V<int>(vehicle, "motionMode");
@@ -178,7 +265,7 @@ public static class RoadsterValidation
                     var panel=body.transform.Find("DriverControls");
                     camera.transform.SetParent(panel,false);camera.transform.localScale=Vector3.one;
                     // World-space distance accounts for the canvas scale.
-                    camera.transform.localPosition=Vector3.back*(.50f/panel.lossyScale.z);
+                    camera.transform.localPosition=Vector3.back*(.67f/panel.lossyScale.z);
                     camera.transform.localRotation=Quaternion.identity;camera.fieldOfView=44;
                 }
                 else
@@ -413,7 +500,7 @@ public static class RoadsterValidation
                     var accelerators=V<Transform[]>(vehicle,"throttlePedals");
                     var brakes=V<Transform[]>(vehicle,"brakePedals");
                     Check("Cockpit moving parts wired across LODs",yokes.Length==3 && accelerators.Length==3 && brakes.Length==3 && yokes[0].childCount>0 && accelerators[0].childCount>0 && brakes[0].childCount>0,"3 yokes + 3 throttle pedals + 3 brake pedals");
-                    Check("Movement exit disabled with explicit escape",V<VRC.SDK3.Components.VRCStation>(vehicle,"station").disableStationExit,"mapped Jump and EXIT use ExitStation");
+                    Check("Movement exit disabled with explicit escape",V<VRC.SDK3.Components.VRCStation>(vehicle,"station").disableStationExit,"X and EXIT use ExitStation; Jump is flight control");
                     vehicle.SetProgramVariable("driverId",99);Action(5).Interact();
                     Check("Occupied boarding feedback",V<string>(vehicle,"controlFeedback").Contains("OCCUPIED") && !V<bool>(vehicle,"pendingSeat"),"simulated driverId=99; "+V<string>(vehicle,"controlFeedback"));
                     vehicle.SetProgramVariable("driverId",-1);Action(5).Interact();next=Time.time+2f;
@@ -437,12 +524,13 @@ public static class RoadsterValidation
                     Input(1,.55f);cockpitCameraMode=1;testLabel="AUTHORED DRIVER EYE / SDK INPUT EVENTS / NOT HMD TRACKING";next=Time.time+.65f;
                     break;
                 case 30:
+                    if(CaptureBeforeChange("clientsim-cockpit-driving"))break;
                     float speedRead;bool speedParsed=float.TryParse(V<UnityEngine.UI.Text>(run,"speedText").text,out speedRead);
                     Check("Live speed and road mode instruments",speedParsed && Mathf.Abs(speedRead-body.velocity.magnitude*3.6f)<10 && V<UnityEngine.UI.Text>(run,"modeText").text=="ROAD","display="+speedRead+" km/h; physics="+(body.velocity.magnitude*3.6f).ToString("F2"));
                     float yokeAngle=Quaternion.Angle(Quaternion.identity,V<Transform[]>(vehicle,"yokes")[0].localRotation);
                     float pedalAngle=Quaternion.Angle(Quaternion.identity,V<Transform[]>(vehicle,"throttlePedals")[0].localRotation);
                     Check("Yoke and throttle pedal follow input",yokeAngle>5 && pedalAngle>8,"yoke="+yokeAngle.ToString("F2")+"; pedal="+pedalAngle.ToString("F2"));
-                    Capture("clientsim-cockpit-driving");start=body.position;Action(0).Interact();
+                    start=body.position;Action(0).Interact();
                     Check("Moving reset requires confirmation",Vector3.Distance(body.position,start)<.1f && V<string>(vehicle,"controlFeedback").Contains("PRESS AGAIN"),V<string>(vehicle,"controlFeedback"));next=Time.time+.2f;
                     break;
                 case 31:
@@ -464,7 +552,7 @@ public static class RoadsterValidation
                     Place(new Vector3(180,20,120),Quaternion.Euler(12,180,24),new Vector3(0,-4,-25));Event(vehicle,"EnableFlight");Input(1,.1f);next=Time.time+.3f;
                     break;
                 case 35:
-                    Check("Flight and thruster cockpit telemetry",V<UnityEngine.UI.Text>(run,"modeText").text=="FLIGHT" && V<UnityEngine.UI.Text>(run,"systemText").text.Contains("ACTIVE") && V<float[]>(vehicle,"thrusterDemand")[6]>.4f,V<UnityEngine.UI.Text>(run,"systemText").text);
+                    Check("Flight and thruster cockpit telemetry",V<UnityEngine.UI.Text>(run,"modeText").text=="FLIGHT" && V<UnityEngine.UI.Text>(run,"systemText").text.Contains("AUTO") && V<float[]>(vehicle,"thrusterDemand")[6]>.4f,V<UnityEngine.UI.Text>(run,"systemText").text);
                     Capture("clientsim-cockpit-flight");next=Time.time+.3f;
                     break;
                 case 36:
@@ -474,19 +562,177 @@ public static class RoadsterValidation
                     Check("Help control changes live panel",!V<bool>(vehicle,"showControlHelp") && V<UnityEngine.UI.Text>(run,"helpText").text.Contains("HELP H"),"help hidden via physical panel Interact");Action(4).Interact();next=Time.time+.2f;
                     break;
                 case 38:
-                    Capture("clientsim-cockpit-controls");Input(1);next=Time.time+.5f;
+                    if(CaptureBeforeChange("clientsim-cockpit-controls"))break;
+                    Input(1);next=Time.time+.5f;
                     break;
                 case 39:
                     UdonManager.Instance.RunInputAction(UdonManager.UDON_INPUT_JUMP,new UdonInputEventArgs(true,HandType.RIGHT));
+                    Check("Jump no longer exits the driver seat",V<bool>(vehicle,"localSeated"),"Jump is now a pilot input");
+                    Button(UdonManager.UDON_INPUT_JUMP,false);Action(2).Interact();
                     cockpitCameraMode=3;testLabel="DRIVER ACCESS / SAFE EXIT TO PADDOCK";next=Time.time+1f;
                     break;
                 case 40:
                     var safe=V<Transform>(vehicle,"safeExit");var playerPosition=Networking.LocalPlayer.GetPosition();
-                    Check("Mapped Jump exits safely to paddock",!V<bool>(vehicle,"localSeated") && V<int>(vehicle,"driverId")==-1 && Vector3.Distance(playerPosition,safe.position)<1.5f,"player="+playerPosition.ToString("F2")+"; exit="+safe.position.ToString("F2"));
+                    Check("Explicit EXIT safely returns to paddock",!V<bool>(vehicle,"localSeated") && V<int>(vehicle,"driverId")==-1 && Vector3.Distance(playerPosition,safe.position)<1.5f,"player="+playerPosition.ToString("F2")+"; exit="+safe.position.ToString("F2"));
                     Check("Exit restores available boarding state",V<UnityEngine.UI.Text>(vehicle,"boardingDisplay").text.Contains("AVAILABLE") && body.velocity.magnitude<.01f,V<UnityEngine.UI.Text>(vehicle,"boardingDisplay").text);
                     Capture("clientsim-cockpit-boarding");next=Time.time+.6f;
                     break;
                 case 41:
+                    Neutral();Action(5).Interact();next=Time.time+1.2f;
+                    break;
+                case 42:
+                    Check("Boarding defaults to Auto and landing assist",!V<bool>(vehicle,"manualFlight") && V<bool>(vehicle,"landingAssistEnabled"),"new driver defaults");
+                    Action(6).Interact();Place(new Vector3(0,50,80),Quaternion.Euler(18,0,30),Vector3.zero);
+                    manualInitialRotation=body.rotation;testLabel="MANUAL / NEUTRAL RATE DAMPING / SCRIPTED INPUT";next=Time.time+.7f;
+                    break;
+                case 43:
+                    Check("Manual neutral preserves tilt with landing assist on",Quaternion.Angle(body.rotation,manualInitialRotation)<1f && V<bool>(vehicle,"landingAssistEnabled"),"orientation delta="+Quaternion.Angle(body.rotation,manualInitialRotation));
+                    body.angularVelocity=new Vector3(1.5f,.8f,-1f);next=Time.time+.45f;
+                    break;
+                case 44:
+                    Check("Manual neutral damps angular velocity",body.angularVelocity.magnitude<.5f,"initial=1.972; final="+body.angularVelocity.magnitude);
+                    SampleAxis("Manual pitch isolated",1,0,0,false,false,new Vector3(1,0,0));
+                    SampleAxis("Manual yaw isolated",0,1,0,false,false,new Vector3(0,1,0));
+                    SampleAxis("Manual roll isolated",0,0,1,false,false,new Vector3(0,0,-1));
+                    SampleAxis("Manual three axes simultaneous",-1,-1,-1,true,false,new Vector3(-1,-1,1));
+                    Check("Manual Space supplies forward thrust",V<float>(vehicle,"throttle")>0f,"Space adapter -> thrust="+V<float>(vehicle,"throttle"));
+                    vehicle.SetProgramVariable("desktopBrake",true);Event(vehicle,"ProcessPilotInput");
+                    Check("Desktop Shift overrides held thrust",V<float>(vehicle,"throttle")<=0f,"throttle="+V<float>(vehicle,"throttle"));
+                    Event(vehicle,"ToggleFlightMode");Event(vehicle,"ProcessPilotInput");
+                    Check("Mode change clears and blocks held controls",!V<bool>(vehicle,"inputArmed") && V<float>(vehicle,"throttle")==0f && V<float>(vehicle,"pitchInput")==0f,"held inputs require neutral");
+                    Neutral();Action(6).Interact();Place(new Vector3(180,35,100),Quaternion.Euler(12,180,24),new Vector3(0,0,-15));Event(vehicle,"EnableFlight");
+                    Input(.6f,.25f);thrustAfterArm=true;cockpitCameraMode=1;testLabel="MANUAL DESKTOP / SDK MOVE + JUMP / NOT PHYSICAL KEYS";next=Time.time+.6f;
+                    break;
+                case 45:
+                    if(CaptureBeforeChange("clientsim-manual-desktop"))break;
+                    Neutral();Place(new Vector3(180,50,100),Quaternion.identity,Vector3.up*10f);Event(vehicle,"EnableFlight");InstallInputFixture();next=Time.time+.3f;
+                    break;
+                case 46:
+                    Check("VR input method selected by SDK hook",V<bool>(vehicle,"vrInput") && V<string>(vehicle,"inputMethodName")=="SteamVR2","synthetic ClientSim VR identity; no HMD");
+                    SendMove(1,0);Button(UdonManager.UDON_INPUT_USE,true);Event(vehicle,"ProcessPilotInput");
+                    Check("Unheld yoke blocks right trigger and stick Y",V<float>(vehicle,"throttle")==0f && !V<bool>(vehicle,"yokeHeld"),"no throttle from left stick Y or panel trigger");
+                    Neutral();Button(UdonManager.UDON_INPUT_GRAB,true,HandType.LEFT);Event(vehicle,"ProcessPilotInput");
+                    Check("Left grip is neither yoke nor index brake",!V<bool>(vehicle,"yokeHeld") && !V<bool>(vehicle,"leftUseHeld") && V<float>(vehicle,"throttle")==0f,"InputGrab LEFT is separate from InputUse LEFT");
+                    Button(UdonManager.UDON_INPUT_GRAB,false,HandType.LEFT);
+                    fixtureHandOffset=Vector3.right;Button(UdonManager.UDON_INPUT_GRAB,true);
+                    Check("Yoke grip outside reach is rejected",!V<bool>(vehicle,"yokeHeld"),"synthetic hand 1 m from anchor");
+                    Button(UdonManager.UDON_INPUT_GRAB,false);fixtureHandOffset=Vector3.zero;
+                    Button(UdonManager.UDON_INPUT_GRAB,true);
+                    Check("Right grip acquires nearby yoke",V<bool>(vehicle,"yokeHeld"),"InputGrab RIGHT, separate from InputUse");
+                    Event(vehicle,"ProcessPilotInput");
+                    Check("Right grip does not become accelerator",!V<bool>(vehicle,"rightUseHeld") && !V<bool>(vehicle,"leftUseHeld") && V<float>(vehicle,"throttle")==0f,"grip acquires pose control only");
+                    Button(UdonManager.UDON_INPUT_USE,true);next=Time.time+.3f;
+                    break;
+                case 47:
+                    Check("Right index button ramps forward thrust",V<float>(vehicle,"throttle")>.8f,"binary Use -> smoothed throttle="+V<float>(vehicle,"throttle"));
+                    Button(UdonManager.UDON_INPUT_USE,true,HandType.LEFT);Event(vehicle,"ProcessPilotInput");
+                    Check("Both index triggers prioritize brake immediately",V<float>(vehicle,"throttle")<=0f,"right+left held; throttle="+V<float>(vehicle,"throttle"));
+                    next=Time.time+.2f;
+                    break;
+                case 48:
+                    Check("Left index button ramps braking",V<float>(vehicle,"throttle")<-.8f,"throttle="+V<float>(vehicle,"throttle"));
+                    Button(UdonManager.UDON_INPUT_USE,false);Event(vehicle,"ProcessPilotInput");
+                    Check("Right trigger release preserves left brake",V<bool>(vehicle,"leftUseHeld") && !V<bool>(vehicle,"rightUseHeld") && V<float>(vehicle,"rawThrottle")==-1f,"independent right release with left held");
+                    Button(UdonManager.UDON_INPUT_USE,true);Button(UdonManager.UDON_INPUT_USE,false,HandType.LEFT);Event(vehicle,"ProcessPilotInput");
+                    Check("Left trigger release preserves right request",!V<bool>(vehicle,"leftUseHeld") && V<bool>(vehicle,"rightUseHeld") && V<float>(vehicle,"rawThrottle")==1f,"independent left release; smooth output crosses neutral over time");
+                    Button(UdonManager.UDON_INPUT_USE,false,HandType.LEFT);Button(UdonManager.UDON_INPUT_USE,false);next=Time.time+.25f;
+                    break;
+                case 49:
+                    Check("Trigger release returns to zero",Mathf.Abs(V<float>(vehicle,"throttle"))<.001f,"zero after smooth release");
+                    fixtureHandRotation=Quaternion.Euler(22,0,0);SendMove(0,0);next=Time.time+.3f;
+                    break;
+                case 50:
+                    Check("VR yoke pitch isolated",V<float>(vehicle,"pitchInput")>.3f && Mathf.Abs(V<float>(vehicle,"rollInput"))<.02f && Mathf.Abs(V<float>(vehicle,"steering"))<.02f,"synthetic right-hand pitch 22 degrees");
+                    fixtureHandRotation=Quaternion.Euler(0,0,25);next=Time.time+.3f;
+                    break;
+                case 51:
+                    Check("VR yoke roll isolated",V<float>(vehicle,"rollInput")>.4f && Mathf.Abs(V<float>(vehicle,"pitchInput"))<.02f,"synthetic right-hand roll 25 degrees");
+                    fixtureHandRotation=Quaternion.identity;SendMove(0,1);next=Time.time+.3f;
+                    break;
+                case 52:
+                    Check("VR left stick yaw isolated",V<float>(vehicle,"steering")>.8f && Mathf.Abs(V<float>(vehicle,"pitchInput"))<.02f && Mathf.Abs(V<float>(vehicle,"rollInput"))<.02f,"Look inputs unused; yaw from MoveHorizontal");
+                    SendMove(1,0);next=Time.time+.3f;
+                    break;
+                case 53:
+                    Check("VR left stick vertical is unused",Mathf.Abs(V<float>(vehicle,"throttle"))<.001f && Mathf.Abs(V<float>(vehicle,"pitchInput"))<.01f,"MoveVertical=1 with no index trigger");
+                    fixtureHandRotation=Quaternion.Euler(18,0,24);SendMove(0,.6f);Button(UdonManager.UDON_INPUT_USE,true);
+                    testLabel="MANUAL VR BRANCH / SYNTHETIC HAND + SDK BUTTONS / NOT HMD";next=Time.time+.3f;
+                    break;
+                case 54:
+                    if(CaptureBeforeChange("clientsim-manual-vr-inputs"))break;
+                    Check("VR three axes plus thrust simultaneous",V<float>(vehicle,"pitchInput")>.2f && V<float>(vehicle,"rollInput")>.3f && V<float>(vehicle,"steering")>.2f && V<float>(vehicle,"throttle")>.8f,"P/Y/R="+new Vector3(V<float>(vehicle,"pitchInput"),V<float>(vehicle,"steering"),V<float>(vehicle,"rollInput")));
+                    Action(3).Interact();Event(vehicle,"ProcessPilotInput");
+                    Check("Panel Interact disarms held trigger",!V<bool>(vehicle,"yokeHeld") && !V<bool>(vehicle,"inputArmed") && V<float>(vehicle,"throttle")==0f,"panel disarms before action");
+                    Neutral();fixtureHandRotation=Quaternion.identity;next=Time.time+.25f;
+                    break;
+                case 55:
+                    Button(UdonManager.UDON_INPUT_GRAB,true);Button(UdonManager.UDON_INPUT_USE,true);next=Time.time+.25f;
+                    break;
+                case 56:
+                    Button(UdonManager.UDON_INPUT_GRAB,false);Event(vehicle,"ProcessPilotInput");
+                    Check("Releasing yoke cuts held acceleration",!V<bool>(vehicle,"yokeHeld") && V<float>(vehicle,"throttle")==0f,"right Use remains held while grip releases");
+                    Button(UdonManager.UDON_INPUT_GRAB,true);
+                    Check("Held accelerator cannot reacquire yoke",!V<bool>(vehicle,"yokeHeld"),"release index trigger before regripping");
+                    Neutral();next=Time.time+.25f;
+                    break;
+                case 57:
+                    Button(UdonManager.UDON_INPUT_GRAB,true);Button(UdonManager.UDON_INPUT_USE,true);Event(vehicle,"ProcessPilotInput");
+                    Neutral();Event(vehicle,"ProcessPilotInput");
+                    Check("SDK menu-style releases clear VR propulsion",!V<bool>(vehicle,"yokeHeld") && V<float>(vehicle,"throttle")==0f,"synthetic release events; not real menu or focus actuation");
+                    ArmSample();Button(UdonManager.UDON_INPUT_GRAB,true);Button(UdonManager.UDON_INPUT_USE,true);Event(vehicle,"ProcessPilotInput");
+                    // Suspension is the supported SDK boundary; this is not an OS Alt-Tab test.
+                    foreach(var p in Resources.FindObjectsOfTypeAll<ClientSimPlayer>())if(p.Player!=null && p.Player.isLocal)p.isSuspended=true;
+                    Event(vehicle,"ProcessPilotInput");
+                    Check("SDK suspension clears held controls",!V<bool>(vehicle,"inputArmed") && !V<bool>(vehicle,"yokeHeld") && V<float>(vehicle,"throttle")==0f,"ClientSim isSuspended=true, real Udon branch");
+                    foreach(var p in Resources.FindObjectsOfTypeAll<ClientSimPlayer>())if(p.Player!=null && p.Player.isLocal)p.isSuspended=false;
+                    Event(vehicle,"ProcessPilotInput");
+                    Check("Resume waits for neutral",!V<bool>(vehicle,"inputArmed"),"held index/grip do not rearm");
+                    Neutral();next=Time.time+.25f;
+                    break;
+                case 58:
+                    if(!gapSample)
+                    {
+                        Button(UdonManager.UDON_INPUT_GRAB,true);Button(UdonManager.UDON_INPUT_USE,true);Event(vehicle,"ProcessPilotInput");
+                        vehicle.SetProgramVariable("lastControlFrame",Time.realtimeSinceStartup-.7f);
+                        gapSample=true;stage--;next=Time.time+.1f;break;
+                    }
+                    Check("Long frame gap disarms controls",!V<bool>(vehicle,"inputArmed") && V<float>(vehicle,"throttle")==0f,"synthetic 0.7 s clock gap; no OS focus API");
+                    ArmSample();
+                    Button(UdonManager.UDON_INPUT_GRAB,true);Button(UdonManager.UDON_INPUT_USE,true);Event(vehicle,"ProcessPilotInput");
+                    vehicle.RunEvent("_onOwnershipTransferred",("Player",Networking.LocalPlayer));
+                    Check("Ownership callback clears controls",!V<bool>(vehicle,"inputArmed") && V<float>(vehicle,"throttle")==0f && !V<bool>(vehicle,"yokeHeld"),"single-client callback branch; not network transfer");
+                    Neutral();RestoreInputFixture();
+                    UdonManager.Instance.RunEvent(UdonManager.UDON_EVENT_ONINPUTMETHODCHANGED,("inputMethod",VRCInputMethod.Keyboard));
+                    Check("Input family change clears VR state",!V<bool>(vehicle,"vrInput") && !V<bool>(vehicle,"inputArmed"),"VR fixture restored to ClientSim desktop");
+                    Action(7).Interact();
+                    Check("Landing switch independent of Manual",V<bool>(vehicle,"manualFlight") && !V<bool>(vehicle,"landingAssistEnabled"),"Manual stays selected; landing OFF");
+                    Action(7).Interact();Action(6).Interact();Neutral();Place(new Vector3(180,35,100),Quaternion.identity,Vector3.zero);Event(vehicle,"EnableFlight");
+                    next=Time.time+.3f;
+                    break;
+                case 59:
+                    Button(UdonManager.UDON_INPUT_JUMP,true);start=body.position;testLabel="AUTO / JUMP LIFT IN PERMITTED FLIGHT ZONE";next=Time.time+.45f;
+                    break;
+                case 60:
+                    Check("Auto Jump supplies permitted lift without exiting",V<bool>(vehicle,"localSeated") && body.velocity.y>0 && V<float>(vehicle,"liftInput")>.8f,"height delta="+(body.position.y-start.y)+"; vy="+body.velocity.y);
+                    Neutral();Event(vehicle,"DisableFlight");Button(UdonManager.UDON_INPUT_JUMP,true);next=Time.time+.35f;
+                    break;
+                case 61:
+                    if(!boundsSample)
+                    {
+                        Check("Jump cannot bypass flight permission",V<int>(vehicle,"motionMode")==4 && !V<bool>(vehicle,"flightAllowed") && V<float>(vehicle,"appliedLift")==0f,"permission removed; no applied lift or lift exhaust");
+                        Neutral();body.position=new Vector3(211,35,100);Event(vehicle,"EnableFlight");
+                        boundsSample=true;stage--;next=Time.time+.1f;break;
+                    }
+                    Check("Crossing flight envelope revokes permission",!V<bool>(vehicle,"flightAllowed") && V<int>(vehicle,"motionMode")==4,"x=211 beyond permitted max x=210");
+                    Neutral();Event(vehicle,"Recover");cockpitCameraMode=2;testLabel="AUTO / MANUAL + INDEPENDENT LANDING / ACTUAL GAME VIEW";next=Time.time+.3f;
+                    break;
+                case 62:
+                    if(CaptureBeforeChange("clientsim-pilot-mode-panel"))break;
+                    vehicle.SetProgramVariable("driverId",99);
+                    Action(2).Interact();next=Time.time+.5f;
+                    break;
+                case 63:
+                    Check("EXIT survives driver authority mismatch",!V<bool>(vehicle,"localSeated") && V<int>(vehicle,"driverId")==-1,"simulated driverId disagreement; local ExitStation still available");
                     int configuredBudget=0;
                     foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterJets")) configuredBudget+=ps.main.maxParticles;
                     foreach(var ps in V<ParticleSystem[]>(vehicle,"thrusterSmoke")) configuredBudget+=ps.main.maxParticles;
