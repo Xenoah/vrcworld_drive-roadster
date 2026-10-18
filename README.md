@@ -2,6 +2,14 @@
 
 オリジナルの電動スポーツカー **DR Asterion** で空港コースを走る PC / PCVR 向けワールドです。スポーン横に **32台（各1席）** を配置し、フリー走行と個人タイムアタックを実装しています。
 
+## 2026-10-18 リリース
+
+[GitHub v0.2.0-alpha.1](https://github.com/Xenoah/vrcworld_drive-roadster/releases/tag/v0.2.0-alpha.1) をプレリリースとして公開しました。配布ZIPは `49f2a35` のソース、導入手順、ファイルごとのハッシュを含みます。
+
+[VRChat: Drive Roadster - Airport](https://vrchat.com/home/world/wrld_1ad6212f-cf9c-4c2e-8f9e-3aeb1aa96378) へPC版のアップロードも成功（version 1、最大32人・推奨16人）。現在は **Private** です。VRChatの公開APIが `canPublish=false` を返しており、Community Labsへの公開は未完了。直近のLabs公開日時と7日間の制限から、次回の公開可能時刻は **10月21日22:27（日本時間）以降が目安** です。実際の可否はVRChat側の判定によります。
+
+ビルド中のメモリ不足からUnityを再起動し、SDK画面のBuild & Publishでアップロード完了を確認しました。最終BuildReportはSucceeded・エラー0件、アップロード完了時のConsoleもエラー0件。[リリース記録](docs/validation/airport-release.json)。以下の「アップロード未実施」は各検証時点の履歴です。実HMD・複数クライアント・連続した一周は引き続き未検証です。
+
 ## 2026-10-18 空港コース更新
 
 保存シーンは `Assets/DriveRoadster/Scenes/DriveRoadster.unity`。更新前の編集中シーンを `BeforeAirport_20261018.unity` に保全しています。

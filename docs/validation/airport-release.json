@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "checked_at": "2026-10-18T22:54:47+09:00",
+  "source_commit": "49f2a35d4db11fbdbc9d915c7bb9bfe6460ec1cb",
+  "github": {
+    "tag": "v0.2.0-alpha.1",
+    "url": "https://github.com/Xenoah/vrcworld_drive-roadster/releases/tag/v0.2.0-alpha.1",
+    "published": true,
+    "prerelease": true,
+    "archive_bytes": 133687980,
+    "archive_sha256": "b178a49c7b30c0994f6aaf28a0b97cf4b95de499b52f5f1d7db4115d2bdaf30c",
+    "remote_asset_digest_verified": true
+  },
+  "vrchat": {
+    "world_id": "wrld_1ad6212f-cf9c-4c2e-8f9e-3aeb1aa96378",
+    "url": "https://vrchat.com/home/world/wrld_1ad6212f-cf9c-4c2e-8f9e-3aeb1aa96378",
+    "name": "Drive Roadster - Airport",
+    "version": 1,
+    "platform": "standalonewindows",
+    "unity_version": "2022.3.22f1",
+    "capacity": 32,
+    "recommended_capacity": 16,
+    "sdk_upload_succeeded": true,
+    "release_status": "private",
+    "can_publish": false,
+    "account_has_required_trust": true,
+    "community_labs_published": false,
+    "latest_prior_labs_publication": "2026-10-14T13:27:06",
+    "estimated_next_publish_jst": "2026-10-21T22:27:06+09:00",
+    "next_publish_estimate_basis": "Prior Labs publication plus the documented seven-day limit; the server did not return an exact reset time.",
+    "bundle_bytes": 27933943,
+    "bundle_sha256": "51c5bb6f9c4695f39d8bb6452be9dd6dc0b4b1a39dcd8318f389a87b400163df",
+    "latest_unity_build_report": "Succeeded",
+    "latest_unity_build_report_errors": 0,
+    "console_errors_at_upload_completion": 0,
+    "note": "Uploaded from the local SDK-configured scene. The distributable ZIP is the exact tagged source; local SDK settings and upload identity are not bundled."
+  },
+  "recovery": "After an out-of-memory crash and recursive PlayerLoop errors, Unity was restarted through VCC and Build & Publish was run from the SDK UI. Upload succeeded without another memory crash.",
+  "unverified": ["physical HMD", "multiple VRChat clients", "32 concurrent drivers", "continuous full lap", "clean-machine dependency restore and import"]
+}
