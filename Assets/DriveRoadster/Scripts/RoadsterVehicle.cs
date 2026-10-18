@@ -41,6 +41,9 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public float yokeFullAngle = 35f;
     public float manualRate = 1.5f; // radians/second at full input
     public float jumpAcceleration = 24f;
+    public float groundJumpSpeed = 8f;
+    private bool previousJumpHeld, stuntJumpActive;
+    private float jumpPulseUntil;
     private float moveVertical, moveHorizontal, desktopRoll;
     private bool jumpHeld, rightUseHeld, leftUseHeld, rightGrabHeld, desktopBrake;
     private bool inputArmed, vrInput, yokeHeld;
@@ -237,6 +240,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) return;
         if (Utilities.IsValid(run)) run.CancelRun();
         ClearInput(); recoverArmedUntil = 0;
+        stuntJumpActive=false; jumpPulseUntil=0; previousJumpHeld=jumpHeld;
         body.velocity = Vector3.zero; body.angularVelocity = Vector3.zero;
         body.position = spawn.position; body.rotation = spawn.rotation;
         surfaceUp = Vector3.up; flightAllowed = false; motionMode = driverId >= 0 ? 1 : 0;
@@ -393,14 +397,22 @@ public class RoadsterVehicle : UdonSharpBehaviour
         float targetSteer=Mathf.Sign(axis)*Mathf.Pow(Mathf.Abs(axis),1.4f)*gain;
         steering=Mathf.MoveTowards(steering,targetSteer,6f*Time.fixedDeltaTime);
         float targetThrottle=ShapeInput(rawThrottle);
-        // Do not retain positive propulsion for a smoothing frame when braking begins.
+        // Neutral releases propulsion immediately; acceleration alone is smoothed.
         if (brakeRequested && throttle>0f) throttle=0f;
-        throttle=Mathf.MoveTowards(throttle,targetThrottle,(targetThrottle<0 ? 10f : 6f)*Time.fixedDeltaTime);
+        throttle=targetThrottle==0f ? 0f : Mathf.MoveTowards(throttle,targetThrottle,(targetThrottle<0 ? 10f : 6f)*Time.fixedDeltaTime);
         pitchInput=Mathf.MoveTowards(pitchInput,manualAir ? ShapeInput(rawPitch)*gain : 0f,6f*Time.fixedDeltaTime);
         rollInput=Mathf.MoveTowards(rollInput,manualAir ? ShapeInput(rawRoll)*gain : 0f,6f*Time.fixedDeltaTime);
         float liftTarget=jumpHeld && !manualFlight && !brakeRequested && (!vrInput || yokeHeld) ? 1f : 0f;
-        if (brakeRequested) liftInput=0f;
+        if (brakeRequested || liftTarget==0f) liftInput=0f;
         liftInput=Mathf.MoveTowards(liftInput,liftTarget,6f*Time.fixedDeltaTime);
+    }
+    public void ReleaseDesktopKeys()
+    {
+        if (!IsLocalDriver() || vrInput || (inputMethodName!="Keyboard" && inputMethodName!="Mouse")) return;
+        // SDK axes can retain their last sample in a station. Physical key release wins.
+        if (!Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.UpArrow) && !Input.GetKey(KeyCode.DownArrow)) moveVertical=0f;
+        if (!Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.LeftArrow) && !Input.GetKey(KeyCode.RightArrow)) moveHorizontal=0f;
+        if (!Input.GetKey(KeyCode.Space)) jumpHeld=false;
     }
     private void SetFeedback(string message) { controlFeedback=message; feedbackUntil=Time.time+5f; }
     public void DriverOnlyFeedback() { SetFeedback("DRIVER ONLY / REQUEST THE SEAT FIRST"); }
@@ -461,6 +473,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         lastControlFrame=Time.realtimeSinceStartup;
         if (IsLocalDriver())
         {
+            ReleaseDesktopKeys();
             desktopRoll=(Input.GetKey(KeyCode.E) ? 1f : 0f)-(Input.GetKey(KeyCode.Q) ? 1f : 0f);
             desktopBrake=Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
         }
@@ -505,6 +518,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
             return;
         }
         ProcessPilotInput();
+        bool jumpPressed=jumpHeld && !previousJumpHeld;
+        previousJumpHeld=jumpHeld;
         for (int i = 0; i < 7; i++) thrusterDemand[i] = 0;
         attitudeCommand = Vector3.zero; landingAcceleration = 0;
         appliedLift=0;
@@ -537,6 +552,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         }
         if (hits >= 2)
         {
+            if (!wasGrounded) stuntJumpActive=false;
             if (!wasGrounded && Time.time - airborneSince > .15f)
             {
                 lastTouchdownSpeed = previousClosingSpeed; touchdownCount++; contactTime = Time.time;
@@ -566,8 +582,16 @@ public class RoadsterVehicle : UdonSharpBehaviour
                 appliedLift=liftInput;
                 body.AddForce(Vector3.up*jumpAcceleration*liftInput,ForceMode.Acceleration);
             }
+            if (jumpPressed && inputArmed && (!vrInput || yokeHeld) && throttle>=0f
+                && Vector3.Dot(normalSum.normalized,Vector3.up)>.85f && body.position.y<flightCeiling)
+            {
+                // A single flat-ground launch, independent of the gated flight section.
+                // Holding Space cannot retrigger it on landing: release, then press again.
+                body.velocity+=Vector3.up*Mathf.Max(0f,groundJumpSpeed-Vector3.Dot(body.velocity,Vector3.up));
+                stuntJumpActive=true; jumpPulseUntil=Time.time+.18f;
+            }
         }
-        else if (flightAllowed && Time.time - airborneSince > 0.12f)
+        else if ((flightAllowed || stuntJumpActive) && Time.time - airborneSince > 0.12f)
         {
             motionMode = 3;
             Vector3 forward = transform.forward;
@@ -575,12 +599,12 @@ public class RoadsterVehicle : UdonSharpBehaviour
             if (throttle<0f && body.velocity.sqrMagnitude>.01f)
                 body.AddForce(-body.velocity.normalized*Mathf.Min(-throttle*brakeAcceleration,body.velocity.magnitude/Time.fixedDeltaTime),ForceMode.Acceleration);
             // Assisted glide: gravity retained, lift follows speed and altitude cap.
-            float lift = manualFlight ? 0f : Mathf.Clamp(body.velocity.magnitude / 28f, 0f, 1f) * 9.81f;
+            float lift = manualFlight || !flightAllowed ? 0f : Mathf.Clamp(body.velocity.magnitude / 28f, 0f, 1f) * 9.81f;
             if (body.position.y > flightCeiling) lift = 0f;
             // Hand descent to the landing controller, which already compensates gravity.
             // Keeping glide lift here can arrest a shallow descent before the wheels reach the road.
             if (landingAssistEnabled && groundClearance >= 0f && closingSpeed > .1f) lift = 0f;
-            appliedLift=body.position.y<flightCeiling ? liftInput : 0f;
+            appliedLift=flightAllowed && body.position.y<flightCeiling ? liftInput : 0f;
             body.AddForce(Vector3.up * (lift - 9.81f + appliedLift*jumpAcceleration), ForceMode.Acceleration);
             // Directional jets expose the same PD request that drives attitude assistance.
             thrusterDemand[6] = Mathf.Max(0f, throttle);
@@ -592,6 +616,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
             ApplyAirAttitude();
             ApplyLandingBrake();
         }
+        if (Time.time<jumpPulseUntil) appliedLift=1f;
         if (hits<2 || appliedLift>0) MixThrusters();
         wasGrounded = hits >= 2;
         previousClosingSpeed = closingSpeed;

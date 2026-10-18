@@ -1,0 +1,11 @@
+{
+  "playing": false,
+  "dirty": false,
+  "cars": 32,
+  "grassPatches": 335,
+  "grassMeshes": 2,
+  "grassMaterials": 1,
+  "grassColliders": 0,
+  "grassBehaviours": 0,
+  "shaderErrors": []
+}

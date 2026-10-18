@@ -66,6 +66,8 @@ public static class RoadsterAirportValidation
                     for(int i=0;i<20;i++)music.SendCustomEvent("VolumeUp");Check("BGM maximum clamp",V<float>(music,"volume")<=.6001f,"volume="+V<float>(music,"volume"));music.SetProgramVariable("volume",.18f);
                     vehicle.Interact();next=Time.time+2;break;
                 case 1:
+                    // Scripted SDK movement fixture; physical-key release is tested separately.
+                    vehicle.SetProgramVariable("inputMethodName","Gamepad");
                     Check("Board driver station",V<bool>(vehicle,"localSeated"),"driverId="+V<int>(vehicle,"driverId"));
                     var head=Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
                     var localHead=body.transform.InverseTransformPoint(head);

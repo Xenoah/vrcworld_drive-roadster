@@ -97,6 +97,7 @@ public static class RoadsterAirportUpgrade
         var reference=GameObject.Find("AirportPreviewCamera").GetComponent<Camera>();reference.nearClipPlane=.02f;reference.farClipPlane=3000;descriptor.ReferenceCamera=reference.gameObject;descriptor.DrawDistance=3000;
         foreach(var p in world.GetComponentsInChildren<UdonSharpBehaviour>(true))UdonSharpEditorUtility.CopyProxyToUdon(p);
         EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene,Root+"/Scenes/DriveRoadster.unity");AssetDatabase.SaveAssets();
+        if(File.Exists(Art+"/Surfaces/Airfield_Grass_Seamless.png"))RoadsterGroundDetail.Apply();
         Debug.Log("AIRPORT_UPGRADE_COMPLETE: 32 shared-prefab vehicles, 14 ordered gates, 1800x1600m land");
     }
 
@@ -186,16 +187,50 @@ public static class RoadsterAirportUpgrade
         return .5f*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t);
     }
     static bool Gap(int i){float u=(float)i/Steps;return u>10.12f && u<12.85f;}
-    static void BuildRoute()
+    static void SampleRoute()
     {
-        route.Clear();ups.Clear();gates.Clear();
+        route.Clear();ups.Clear();
         for(int i=0;i<=controls.Length*Steps;i++)
         {
-            float u=(float)i/Steps;Vector3 p=Spline(u);p.y=Mathf.Max(0,p.y)+.06f;route.Add(p);
+            float u=(float)i/Steps;Vector3 p=Spline(u);p.y=Mathf.Max(0,p.y)+.06f;
             Vector3 tangent=(Spline(u+.005f)-Spline(u-.005f)).normalized;
-            float bank=u>2.5f && u<5.5f ? 58*Mathf.Pow(Mathf.Sin((u-2.5f)/3*Mathf.PI),2) : 0;
+            // Clockwise bend: raise its outside (left) edge and lean the normal inward.
+            float bank=u>2.5f && u<5.5f ? -58*Mathf.Pow(Mathf.Sin((u-2.5f)/3*Mathf.PI),2) : 0;
+            // Keep the low edge above the airfield's underlying ground collider.
+            p.y=Mathf.Max(p.y,10f*Mathf.Abs(Mathf.Sin(bank*Mathf.Deg2Rad))+.06f);route.Add(p);
             ups.Add(Quaternion.AngleAxis(bank,tangent)*Vector3.up);
         }
+    }
+    [MenuItem("Drive Roadster/Repair airport bank and update guides")]
+    public static void RepairBankAndGuides()
+    {
+        if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop play mode first");
+        environment=GameObject.Find("AirportEnvironment").transform;
+        asphalt=AssetDatabase.LoadAssetAtPath<Material>(Art+"/Materials/RunwayAsphalt.mat");
+        white=AssetDatabase.LoadAssetAtPath<Material>(Art+"/Materials/MarkingWhite.mat");
+        cyan=AssetDatabase.LoadAssetAtPath<Material>(Art+"/Materials/RouteCyan.mat");
+        navy=AssetDatabase.LoadAssetAtPath<Material>(Art+"/Materials/AirportNavy.mat");
+        SampleRoute();
+        Strip("AirportCircuit",-10,10,0,asphalt,true,true);
+        Strip("LeftEdge",-9.5f,-9.25f,.025f,white,false,true);Strip("RightEdge",9.25f,9.5f,.025f,white,false,true);
+        Strip("LeftGuidance",-10.1f,-9.85f,.04f,cyan,false,true);Strip("RightGuidance",9.85f,10.1f,.04f,cyan,false,true);
+        var curbs=environment.Cast<Transform>().Where(t=>t.name=="Curb").ToArray();
+        var dashes=environment.Cast<Transform>().Where(t=>t.name=="DirectionDash").ToArray();int c=0,d=0;
+        for(int i=0;i<route.Count-1;i+=8)
+        {
+            if(Gap(i))continue;
+            var f=(route[Mathf.Min(i+1,route.Count-1)]-route[Mathf.Max(0,i-1)]).normalized;
+            var q=Quaternion.LookRotation(f,ups[i]);
+            if(i%24==0){dashes[d].SetPositionAndRotation(route[i]+ups[i]*.04f,q);d++;}
+            foreach(int side in new[]{-1,1}){curbs[c].SetPositionAndRotation(route[i]+q*new Vector3(side*10.5f,.04f,0),q);c++;}
+        }
+        var bankGate=environment.Find("Gate_02_BANK");bankGate.position=route[gateSamples[2]]+Vector3.up*2;
+        AddThrusterGuide(GameObject.Find("Entrance").transform);
+        AssetDatabase.SaveAssets();var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);
+    }
+    static void BuildRoute()
+    {
+        SampleRoute();gates.Clear();
         Strip("AirportCircuit",-10,10,0,asphalt,true,true);
         Strip("LeftEdge",-9.5f,-9.25f,.025f,white,false,true);Strip("RightEdge",9.25f,9.5f,.025f,white,false,true);
         Strip("LeftGuidance",-10.1f,-9.85f,.04f,cyan,false,true);Strip("RightGuidance",9.85f,10.1f,.04f,cyan,false,true);
@@ -240,9 +275,17 @@ public static class RoadsterAirportUpgrade
         }
         var mesh=new Mesh{name=name};mesh.vertices=verts;mesh.uv=uv;mesh.triangles=tris.ToArray();mesh.RecalculateNormals();mesh.RecalculateBounds();
         string path=Art+"/Meshes/"+name+".asset";var old=AssetDatabase.LoadAssetAtPath<Mesh>(path);
-        if(old!=null){EditorUtility.CopySerialized(mesh,old);Object.DestroyImmediate(mesh);mesh=old;}else AssetDatabase.CreateAsset(mesh,path);
-        var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(environment,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=mat;go.isStatic=true;
-        if(collision)go.AddComponent<MeshCollider>().sharedMesh=mesh;
+        if(old!=null)
+        {
+            // Update native mesh buffers as well as serialized data. CopySerialized alone
+            // can leave the already-uploaded rendering buffer showing the old bank.
+            old.Clear();old.vertices=verts;old.uv=uv;old.triangles=tris.ToArray();old.RecalculateNormals();old.RecalculateBounds();
+            EditorUtility.SetDirty(old);Object.DestroyImmediate(mesh);mesh=old;
+        }
+        else AssetDatabase.CreateAsset(mesh,path);
+        var existing=environment.Find(name);
+        var go=existing!=null ? existing.gameObject : new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(environment,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=mat;go.isStatic=true;
+        if(collision){var collider=go.GetComponent<MeshCollider>();if(collider==null)collider=go.AddComponent<MeshCollider>();collider.sharedMesh=null;collider.sharedMesh=mesh;}
     }
     public static void BuildBuildings()
     {
@@ -315,6 +358,7 @@ public static class RoadsterAirportUpgrade
         var root=New("Entrance",world,Vector3.zero);
         Sign(root,"Controls_JA",new Vector3(-560,3.2f,-315),new Vector2(7.2f,5.4f),"Entrance_Controls_JA.png");
         Sign(root,"CourseMap",new Vector3(-550,3.2f,-315),new Vector2(5.4f,5.4f),"Course_Map.png");
+        AddThrusterGuide(root);
         foreach(float x in new[]{-563,-557,-552,-548})Box("SignPost",root,new Vector3(x,1.8f,-314.8f),new Vector3(.18f,3.6f,.18f),navy,true);
         var music=New("AirportBGM",world,Vector3.zero).gameObject.AddUdonSharpComponent<RoadsterMusic>();
         var source=music.gameObject.AddComponent<AudioSource>();source.playOnAwake=false;source.spatialBlend=0;source.volume=0;source.priority=200;
@@ -328,6 +372,12 @@ public static class RoadsterAirportUpgrade
         {var b=Box(names[i],panel,new Vector3(-1.4f+i*.94f,-.45f,-.22f),new Vector3(.8f,.62f,.18f),i==0?amber:concrete,true);b.layer=8;var button=b.AddUdonSharpComponent<RoadsterMusicButton>();button.music=music;button.action=i;button.InteractionText=names[i];Label("Label",panel,names[i],new Vector3(-1.4f+i*.94f,-.45f,-.32f),Quaternion.identity,.12f,Color.white);}
         Label("EntranceTitle",root,"PADDOCK  /  32",new Vector3(-500,6,-333),Quaternion.identity,1.3f,Color.white);
         Box("EntranceHeader",root,new Vector3(-500,6,-332),new Vector3(26,2,1),navy,false);
+    }
+    static void AddThrusterGuide(Transform entrance)
+    {
+        if(entrance.Find("ThrusterGuide_JA")!=null)return;
+        Sign(entrance,"ThrusterGuide_JA",new Vector3(-570,3.2f,-315),new Vector2(7.2f,5.4f),"Thruster_Controls_JA.png");
+        foreach(float x in new[]{-573,-567})Box("ThrusterSignPost",entrance,new Vector3(x,1.8f,-314.8f),new Vector3(.18f,3.6f,.18f),navy,true);
     }
     static void Sign(Transform parent,string name,Vector3 position,Vector2 size,string texture)
     {

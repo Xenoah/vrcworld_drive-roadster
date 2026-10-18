@@ -1,0 +1,116 @@
+{
+    "environment": "Unity ClientSim, one desktop simulated player; scripted SDK events and Q/E state samples; physical no-key release check; no HMD/network clients",
+    "checks": [
+        {
+            "name": "Bank outside edge is higher",
+            "passed": true,
+            "detail": "samples=69/69"
+        },
+        {
+            "name": "Bank normal leans into right turn",
+            "passed": true,
+            "detail": "samples=69/69"
+        },
+        {
+            "name": "Low bank edge clears ground",
+            "passed": true,
+            "detail": "minimum y=0.06000042"
+        },
+        {
+            "name": "Corrected bank collider covers lane",
+            "passed": true,
+            "detail": "102/102"
+        },
+        {
+            "name": "Driver boarded",
+            "passed": true,
+            "detail": "ClientSim station"
+        },
+        {
+            "name": "Throttle responds to press",
+            "passed": true,
+            "detail": "throttle=1"
+        },
+        {
+            "name": "Release immediately sets throttle to zero",
+            "passed": true,
+            "detail": "one input processing step"
+        },
+        {
+            "name": "Neutral preserves momentum",
+            "passed": true,
+            "detail": "velocity=(0.00, 0.00, 11.29)"
+        },
+        {
+            "name": "Physical release clears stale SDK input",
+            "passed": true,
+            "detail": "no physical keys held, stale positive samples injected"
+        },
+        {
+            "name": "Auto flat-ground jump without flight gate",
+            "passed": true,
+            "detail": "vertical velocity=7.327957"
+        },
+        {
+            "name": "Jump fires four downward nozzles",
+            "passed": true,
+            "detail": "four jets=1,1,0.9999996,0.9999996"
+        },
+        {
+            "name": "Flat jump gains height",
+            "passed": true,
+            "detail": "height gain=2.553862"
+        },
+        {
+            "name": "Held Space does not retrigger at touchdown",
+            "passed": true,
+            "detail": "grounded=True velocity=(0.00, 0.00, -0.01)"
+        },
+        {
+            "name": "Manual flat-ground jump",
+            "passed": true,
+            "detail": "vertical velocity=7.216708"
+        },
+        {
+            "name": "Manual re-arms after launch release",
+            "passed": true,
+            "detail": "MANUAL GROUND/AIR CHANGE / RELEASE INPUTS"
+        },
+        {
+            "name": "W nose down uses rear pair",
+            "passed": true,
+            "detail": "torque=(0.45, 0.00, 0.00) jets=0.000,0.000,0.044,0.044"
+        },
+        {
+            "name": "S nose up uses front pair",
+            "passed": true,
+            "detail": "torque=(-0.45, 0.00, 0.00) jets=0.044,0.044,0.000,0.000"
+        },
+        {
+            "name": "Q roll left uses right pair",
+            "passed": true,
+            "detail": "torque=(0.00, 0.00, 0.45) jets=0.000,0.044,0.000,0.044"
+        },
+        {
+            "name": "E roll right uses left pair",
+            "passed": true,
+            "detail": "torque=(0.00, 0.00, -0.45) jets=0.044,0.000,0.044,0.000"
+        },
+        {
+            "name": "Manual air thrust releases immediately",
+            "passed": true,
+            "detail": "Space up -> zero throttle"
+        },
+        {
+            "name": "Fleet count remains 32",
+            "passed": true,
+            "detail": "shared fleet preserved"
+        },
+        {
+            "name": "Runtime errors absent",
+            "passed": true,
+            "detail": ""
+        }
+    ],
+    "errors": []
+}

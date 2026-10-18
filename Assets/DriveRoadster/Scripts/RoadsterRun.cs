@@ -186,7 +186,7 @@ public class RoadsterRun : UdonSharpBehaviour
         if(Utilities.IsValid(landingToggleText)) landingToggleText.text="LANDING "+(vehicle.landingAssistEnabled ? "ON" : "OFF")+" [L]";
         if(Utilities.IsValid(inputText)) inputText.text=vehicle.GetInputName()+"\n"+vehicle.GetInputMethodName();
         bool vr=vehicle.GetInputName().StartsWith("VR");
-        string help=vr ? "RIGHT GRIP: hold yoke near wheel\nR INDEX: thrust  L INDEX: brake\nLEFT X: yaw / steer  LEFT Y: unused\nMANUAL AIR: yoke pitch / roll\nAUTO: Jump lift in flight zone\nRelease grip before using panel" : "GROUND: W/S drive  A/D steer\nAUTO AIR: W/S thrust/brake  A/D yaw\nAUTO: Space lift in flight zone\nMANUAL AIR: W/S pitch  A/D yaw\nQ/E roll  Space thrust  Shift brake\nF mode  L landing  Backspace reset";
+        string help=vr ? "RIGHT GRIP: hold yoke near wheel\nR INDEX: thrust  L INDEX: brake\nFLAT GROUND: tap Jump with grip\nMANUAL AIR: yoke pitch / roll\nLEFT X: yaw / steer  LEFT Y: unused\nAUTO: Jump lift in flight zone\nJUMP: 4 down jets / attitude: pairs\nRelease grip before using panel" : "GROUND: W/S drive  A/D steer\nKEY RELEASE: throttle 0 / coast\nFLAT GROUND: tap Space to jump\nF MANUAL, jump, release keys briefly\nAIR: W nose down / S nose up\nQ roll left / E right, A/D yaw\nSpace thrust / Shift brake / L land\n4 down jets: jump / pairs: attitude";
         helpText.text=vehicle.showControlHelp ? help+"\nT time attack  X EXIT  H help\nRelease inputs after mode / reset" : "HELP H / INTERACT TO SHOW CONTROLS\nEXIT always returns to the paddock";
     }
 

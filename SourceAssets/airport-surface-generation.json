@@ -1,0 +1,17 @@
+{
+  "mode": "Built-in image_gen (no CLI/API fallback)",
+  "date": "2026-10-18",
+  "assets": [
+    {
+      "path": "Assets/DriveRoadster/Art/Airport/Surfaces/Airfield_Grass_Seamless.png",
+      "prompt": "Create one production-ready seamless tileable ground albedo texture for a Unity PCVR airport driving world. Square 2048 x 2048. Strict orthographic top-down flat material scan of closely mown airfield grass with fine olive and muted meadow-green blades, scattered dry straw and very small irregular earth gaps, modest natural granular variation. Realistic game environment texture, neutral diffuse color with no baked directional light or cast shadows, low to medium contrast. Uniform density across the image, no central subject, no obvious large patch or landmark. All four edges must join invisibly when repeated horizontally and vertically. No perspective, horizon, scenery, flowers, rocks, objects, labels, borders, text, watermark, specular highlights, or transparency. This is a single raw repeating material texture, not a rendered scene or a sheet of samples."
+    },
+    {
+      "path": "Assets/DriveRoadster/Art/Airport/Surfaces/Airfield_Asphalt_Seamless.png",
+      "prompt": "Create a single seamless tileable airport asphalt albedo texture, square 2048 x 2048. Strict orthographic top-down flat texture scan, evenly fine aggregate and subtle worn charcoal-gray tarmac with understated granular variation. Realistic game-ready material for a modern airfield runway and banked race course. Neutral diffuse lighting, low contrast, consistent surface density, invisible joins across all four edges when tiled in both directions. No roadway scene, perspective, horizon, lane markings, painted letters, large cracks, potholes, tire marks, objects, shadows, gradients, borders, text, labels, watermark, transparency, or specular highlights. Raw repeating material texture only."
+    }
+  ],
+  "unity_import": "Maximum 1024px, compressed, mipmapped, trilinear, anisotropy 4; mirror wrapping for continuous borders.",
+  "shader": "World XZ texture mapping, secondary rotated sample, subtle broad colour variation; no unique oversized terrain texture.",
+  "grass": "Procedural opaque blade geometry, 2 shared meshes and 1 instanced material, LOD and distance reduction, no colliders or behaviour scripts."
+}

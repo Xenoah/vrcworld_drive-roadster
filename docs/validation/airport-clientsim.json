@@ -79,7 +79,7 @@
         {
             "name": "Vehicle accelerates along runway",
             "passed": true,
-            "detail": "distance=61.06058 speed=45.56781"
+            "detail": "distance=60.55428 speed=45.383"
         },
         {
             "name": "Motor responds to acceleration",
@@ -99,12 +99,12 @@
         {
             "name": "Stopped motor becomes silent",
             "passed": true,
-            "detail": "volume=1.065251E-05"
+            "detail": "volume=1.725182E-05"
         },
         {
             "name": "Flight and landing jets drive gas audio",
             "passed": true,
-            "detail": "volume=0.3629371"
+            "detail": "volume=0.3623498"
         },
         {
             "name": "Increased smoke emits live particles",
