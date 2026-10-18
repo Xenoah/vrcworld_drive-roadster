@@ -49,32 +49,42 @@
         {
             "name": "Auto flat-ground jump without flight gate",
             "passed": true,
-            "detail": "vertical velocity=7.2196"
+            "detail": "vertical velocity=7.841808"
         },
         {
             "name": "Jump fires four downward nozzles",
             "passed": true,
-            "detail": "four jets=1,1,0.9998403,0.9998403"
+            "detail": "four jets=1,1,0.9998258,0.9998258"
         },
         {
             "name": "Flat jump gains height",
             "passed": true,
-            "detail": "height gain=2.555192"
+            "detail": "height gain=4.208235"
         },
         {
-            "name": "Held Space does not retrigger at touchdown",
+            "name": "Held Space continues upward thrust",
             "passed": true,
-            "detail": "grounded=True velocity=(0.00, 0.00, 0.00)"
+            "detail": "lift=1"
+        },
+        {
+            "name": "Jump release stops lift request immediately",
+            "passed": true,
+            "detail": "lift request=0"
+        },
+        {
+            "name": "Released Space returns to ground without bounce",
+            "passed": true,
+            "detail": "grounded=True velocity=(0.00, 0.00, -0.01)"
         },
         {
             "name": "Manual flat-ground jump",
             "passed": true,
-            "detail": "vertical velocity=7.216708"
+            "detail": "vertical velocity=7.80766"
         },
         {
-            "name": "Manual re-arms after launch release",
+            "name": "Manual stays armed across launch",
             "passed": true,
-            "detail": "MANUAL GROUND/AIR CHANGE / RELEASE INPUTS"
+            "detail": "MANUAL / RELEASE W S A D Q E / SPACE MAY STAY HELD"
         },
         {
             "name": "W nose down uses rear pair",
@@ -99,7 +109,7 @@
         {
             "name": "Manual air thrust releases immediately",
             "passed": true,
-            "detail": "Space up -> zero throttle"
+            "detail": "Ctrl up -> zero forward throttle"
         },
         {
             "name": "Fleet count remains 32",

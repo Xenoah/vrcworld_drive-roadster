@@ -65,56 +65,8 @@ for i in range(32):
     d.text((128,185),'ASTERION',font=font(24,True),fill=c,anchor='mm')
     im.save(OUT/f'Livery_{i+1:02d}.png')
 
-im=Image.new('RGB',(2048,1536),navy);d=ImageDraw.Draw(im)
-d.rectangle((0,0,2048,20),fill=orange)
-d.text((90,66),'ASTERION  /  AIRFIELD',font=font(88,True),fill=white)
-d.text((92,190),'DRIVING GUIDE     操作ガイド',font=font(44),fill=cyan)
-d.line((90,275,1958,275),fill=(54,76,88),width=3)
-sections=[(90,320,'01  乗車 / DRIVE',[
- '番号付きの車を選び、左ドアの DRIVER ACCESS を操作',
- 'Desktop : W / S 加速・制動、離すと推力ゼロ / 惰性走行',
- 'VR : 右グリップでヨーク保持 → 右トリガーで加速',
- '      左トリガーで制動 / 左スティック左右で操舵']),
- (90,650,'02  飛行 / FLIGHT',[
- '平地で Space を１回押してジャンプ。F で AUTO / MANUAL',
- 'AUTO : Space で上昇。W / S 推力・制動',
- 'MANUAL : W / S ピッチ、A / D ヨー、Q / E ロール',
- '                Space 推力、Shift 制動。L で着陸補助']),
- (90,980,'03  復帰・タイム計測 / RETURN & TIME ATTACK',[
- 'Backspace : 自分の駐車枠へ復帰（走行中は２度押し）',
- 'X / EXIT : 降車して入口へ。H : 車内ヘルプ',
- 'START手前の枠で停止 → T → 順番にゲートを通過',
- 'BGM : 入口の操作盤で ON/OFF・曲送り・音量調整'])]
-for x,y,title,lines in sections:
-    d.text((x,y),title,font=font(45,True),fill=orange)
-    for j,line in enumerate(lines):d.text((x,y+76+j*51),line,font=font(36),fill=white)
-d.text((90,1435),'32 CARS  /  SHARED AIRFIELD   •   譲り合って走行してください',font=font(30),fill=mute)
-im.save(OUT/'Entrance_Controls_JA.png')
-
-# Dedicated readable instructions for the flat-ground launch and nozzle directions.
-im=Image.new('RGB',(2048,1536),navy);d=ImageDraw.Draw(im)
-d.rectangle((0,0,2048,20),fill=cyan)
-d.text((90,60),'THRUSTERS  /  JUMP & ROTATE',font=font(76,True),fill=white)
-d.text((92,175),'平地ジャンプ・空中姿勢操作',font=font(48),fill=cyan)
-sections=[(300,'01  平地からジャンプ',[
- 'Space を１回押す → 車体下の４基が下向きに噴射',
- 'AUTO / MANUAL 共通。平らな路面で使用。再ジャンプは離して再押下',
- 'W / S を離すとスロットル０。車速は慣性で残ります']),
- (590,'02  ジャンプしながら姿勢を変える（Desktop）',[
- '地上で F → MANUAL → 一度キーを離す → Space でジャンプ',
- '離陸後もキーを一度離す（約0.15秒）→ W / S ピッチ、Q / E ロール',
- 'W：機首下げ（後方２基） / S：機首上げ（前方２基）',
- 'Q：左ロール（右側２基） / E：右ロール（左側２基）']),
- (940,'03  空中・着地 / VR',[
- 'MANUAL空中：A / D ヨー、Space 前進噴射、Shift 制動',
- 'キーを離すと推力０、回転は減衰。F → AUTO で水平復帰',
- 'L：着陸補助 ON/OFF。着地前に車体を起こしてください',
- 'VR：右グリップでヨーク保持＋Jump。MANUAL空中は手首でピッチ／ロール'])]
-for y,title,lines in sections:
-    d.text((90,y),title,font=font(43,True),fill=orange)
-    for j,line in enumerate(lines):d.text((90,y+72+j*52),line,font=font(33),fill=white)
-d.text((90,1435),'噴射は車体の向きに追従。白煙は噴射を止めた後も残ります。',font=font(32),fill=mute)
-im.save(OUT/'Thruster_Controls_JA.png')
+from build_airport_signs import generate_signs
+generate_signs()
 
 points=[[-280,0,-260],[-280,0,100],[-280,0,470],[-240,3,570],[-130,8,590],[-60,3,530],[-90,0,440],[20,0,380],[120,0,460],[240,0,450],[340,9,350],[380,22,240],[360,18,100],[300,0,30],[350,0,-60],[420,0,-150],[400,0,-290],[280,0,-380],[140,0,-350],[40,0,-450],[-100,0,-470],[-220,0,-410],[-280,0,-330]]
 data={'land_size':[1800,1600],'points':points,'flight_range':[10.12,12.85],
@@ -138,4 +90,4 @@ d.text(xy([-135,0,40]),'STUNT\nPRACTICE',font=font(23,True),fill=orange)
 x,y=xy([-500,0,-260]);d.rounded_rectangle((x-65,y-65,x+65,y+65),radius=8,fill=(69,92,105));d.text((x,y),'P\n32',font=font(36,True),fill=white,anchor='mm',align='center')
 d.text((75,1430),'CYAN: CIRCUIT     ORANGE: FLIGHT     P: 32 CAR PADDOCK',font=font(30),fill=mute)
 im.save(OUT/'Course_Map.png')
-print('Generated 4 SFX, 3 looping music tracks, 32 liveries and 3 signs.')
+print('Generated 4 SFX, 3 looping music tracks, 32 liveries and 4 signs.')

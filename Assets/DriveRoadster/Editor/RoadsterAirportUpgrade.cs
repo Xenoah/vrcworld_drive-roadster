@@ -360,6 +360,7 @@ public static class RoadsterAirportUpgrade
         Sign(root,"Controls_JA",new Vector3(-560,3.2f,-315),new Vector2(7.2f,5.4f),"Entrance_Controls_JA.png");
         Sign(root,"CourseMap",new Vector3(-550,3.2f,-315),new Vector2(5.4f,5.4f),"Course_Map.png");
         AddThrusterGuide(root);
+        AddVRGuide(root);
         foreach(float x in new[]{-563,-557,-552,-548})Box("SignPost",root,new Vector3(x,1.8f,-314.8f),new Vector3(.18f,3.6f,.18f),navy,true);
         var music=New("AirportBGM",world,Vector3.zero).gameObject.AddUdonSharpComponent<RoadsterMusic>();
         var source=music.gameObject.AddComponent<AudioSource>();source.playOnAwake=false;source.spatialBlend=0;source.volume=0;source.priority=200;
@@ -379,6 +380,20 @@ public static class RoadsterAirportUpgrade
         if(entrance.Find("ThrusterGuide_JA")!=null)return;
         Sign(entrance,"ThrusterGuide_JA",new Vector3(-570,3.2f,-315),new Vector2(7.2f,5.4f),"Thruster_Controls_JA.png");
         foreach(float x in new[]{-573,-567})Box("ThrusterSignPost",entrance,new Vector3(x,1.8f,-314.8f),new Vector3(.18f,3.6f,.18f),navy,true);
+    }
+    static void AddVRGuide(Transform entrance)
+    {
+        if(entrance.Find("VRControls_JA")!=null)return;
+        Sign(entrance,"VRControls_JA",new Vector3(-580,3.2f,-315),new Vector2(7.2f,5.4f),"VR_Controls_JA.png");
+        foreach(float x in new[]{-583,-577})Box("VRSignPost",entrance,new Vector3(x,1.8f,-314.8f),new Vector3(.18f,3.6f,.18f),navy,true);
+    }
+    [MenuItem("Drive Roadster/Update PC and VR control guides")]
+    public static void UpdateControlGuides()
+    {
+        if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode first");
+        navy=AssetDatabase.LoadAssetAtPath<Material>(Art+"/Materials/AirportNavy.mat");
+        var entrance=GameObject.Find("Entrance").transform;AddThrusterGuide(entrance);AddVRGuide(entrance);
+        AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
     }
     static void Sign(Transform parent,string name,Vector3 position,Vector2 size,string texture)
     {

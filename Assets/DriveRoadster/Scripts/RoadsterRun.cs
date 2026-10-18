@@ -16,7 +16,7 @@ public class RoadsterRun : UdonSharpBehaviour
     public UnityEngine.UI.Text display;
     public UnityEngine.UI.Text cockpitDisplay;
     public UnityEngine.UI.Text speedText, modeText, driveText, lapText, systemText, attitudeText, feedbackText, helpText, profileText;
-    public UnityEngine.UI.Text pilotModeText, landingToggleText, inputText;
+    public UnityEngine.UI.Text pilotModeText, landingToggleText, inputText, guideToggleText;
     public UnityEngine.UI.Image[] thrusterBars;
     public RectTransform attitudeLine;
     public string courseVersion = "coast-v1";
@@ -168,7 +168,7 @@ public class RoadsterRun : UdonSharpBehaviour
         Vector3 landing=vehicle.GetLandingTelemetry();
         string landingState=!vehicle.landingAssistEnabled ? "LANDING  OFF" : mode<3 ? "LANDING  STANDBY" : landing.z>.5f ? "LANDING  BRAKING "+landing.z.ToString("F1") : Vector3.Dot(transform.up,Vector3.up)<.35f ? "LANDING  CHECK ATTITUDE" : "LANDING  ARMED";
         float fanG=vehicle.GetFanAcceleration()/9.81f;
-        systemText.text=(vehicle.manualFlight ? "MANUAL / RATE DAMPING" : "AUTO / LEVEL ASSIST")+"\n"+landingState+"\nFAN "+(fanG>.01f ? fanG.ToString("F1")+" G / SURFACE GRIP" : "STANDBY");
+        systemText.text=(vehicle.manualFlight ? "MANUAL / RATE DAMPING" : "AUTO / THRUSTER LEVEL HOLD")+"\n"+landingState+"\nFAN "+(fanG>.01f ? fanG.ToString("F1")+" G / SURFACE GRIP" : "STANDBY");
         float pitch=Mathf.Asin(Mathf.Clamp(transform.forward.y,-1f,1f))*Mathf.Rad2Deg;
         float roll=Mathf.Atan2(transform.right.y,transform.up.y)*Mathf.Rad2Deg;
         attitudeText.text="PITCH "+pitch.ToString("F0")+"  ROLL "+roll.ToString("F0")+"\nH "+(landing.x<0 ? "--" : landing.x.ToString("F1"))+" m  DOWN "+landing.y.ToString("F1")+" m/s";
@@ -185,10 +185,11 @@ public class RoadsterRun : UdonSharpBehaviour
         profileText.text="FEEL / "+vehicle.GetProfileName()+" [C]";
         if(Utilities.IsValid(pilotModeText)) pilotModeText.text=(vehicle.manualFlight ? "MANUAL" : "AUTO")+" [F]";
         if(Utilities.IsValid(landingToggleText)) landingToggleText.text="LANDING "+(vehicle.landingAssistEnabled ? "ON" : "OFF")+" [L]";
-        if(Utilities.IsValid(inputText)) inputText.text=vehicle.GetInputName()+"\n"+vehicle.GetInputMethodName();
-        bool vr=vehicle.GetInputName().StartsWith("VR");
-        string help=vr ? "RIGHT GRIP: hold yoke near wheel\nR INDEX: thrust  L INDEX: brake\nFLAT GROUND: tap Jump with grip\nMANUAL AIR: yoke pitch / roll\nLEFT X: yaw / steer  LEFT Y: unused\nAUTO: Jump lift in flight zone\nJUMP: 4 down jets / attitude: pairs\nRelease grip before using panel" : "GROUND: W/S drive  A/D steer\nKEY RELEASE: throttle 0 / coast\nFLAT GROUND: tap Space to jump\nF MANUAL, jump, release keys briefly\nAIR: W nose down / S nose up\nQ roll left / E right, A/D yaw\nSpace thrust / Shift brake / L land\n4 down jets: jump / pairs: attitude";
-        helpText.text=vehicle.showControlHelp ? help+"\nVIEW: PgUp / PgDn, Home default\nFAN: auto on slopes / up to 2 G\nT time attack  X EXIT  H help\nRelease inputs after mode / reset" : "HELP H / INTERACT TO SHOW CONTROLS\nEXIT always returns to the paddock";
+        bool vr=vehicle.IsVRControlGuide();
+        if(Utilities.IsValid(inputText)) inputText.text=vehicle.GetInputName().StartsWith("VR") ? "VR / CONTROLLERS\nRight grip holds the yoke" : "DESKTOP / KEYBOARD\nPgUp / PgDn: view height";
+        if(Utilities.IsValid(guideToggleText))guideToggleText.text=(vr ? "VR GUIDE" : "PC GUIDE")+"\nPC / VR";
+        string help=vr ? "R GRIP: grab yoke near steering wheel\nR INDEX: forward / L INDEX: brake\nHold JUMP + grip: jump / continuous lift\nTouch default: right A = JUMP\nOther bindings: use mapped Jump button\nLeft stick X: steering / yaw (Y unused)\nAUTO: thrusters keep pitch / roll level\nMANUAL: wrist tilt = pitch / roll\nRelease grip before panel Interact\nPanel: AUTO / LANDING / VIEW - or +\nEXIT: paddock / FAN: automatic on slopes\nPC / VR button: switch this guide" : "Space HOLD: jump / continuous lift\nRelease Space: lift off, then descend\nAUTO: thrusters keep pitch / roll level\nGROUND + AUTO: W/S drive / brake\nA/D steer / yaw; keys up: coast\nMANUAL AIR: W/S pitch, Q/E roll\nCtrl forward thrust / Shift brake\nAfter takeoff: release W/S, A/D, Q/E\nF Auto/Manual / L landing assist\nPgUp/PgDn view / Home default\nFAN: automatic on slopes / up to 2 G\nT time attack / X exit / H help";
+        helpText.text=vehicle.showControlHelp ? help : "HELP H / INTERACT TO SHOW CONTROLS\nPC / VR switches the guide\nEXIT always returns to the paddock";
     }
 
 }

@@ -41,7 +41,7 @@ public static class RoadsterControlsValidation
     static void Check(string n,bool ok,string detail){report.checks.Add(new CheckResult{name=n,passed=ok,detail=detail});}
     static void Move(float v){UdonManager.Instance.RunInputAction(UdonManager.UDON_MOVE_VERTICAL,new UdonInputEventArgs(v,HandType.LEFT));}
     static void Jump(bool v){UdonManager.Instance.RunInputAction(UdonManager.UDON_INPUT_JUMP,new UdonInputEventArgs(v,HandType.RIGHT));}
-    static void Neutral(){Move(0);Jump(false);Set("moveHorizontal",0f);Set("desktopRoll",0f);Set("desktopBrake",false);}
+    static void Neutral(){Move(0);Jump(false);Set("moveHorizontal",0f);Set("desktopRoll",0f);Set("desktopBrake",false);Set("desktopThrust",false);}
     static void Bank()
     {
         // Static batching replaces the renderer mesh in Play Mode; sample the source mesh.
@@ -106,21 +106,23 @@ public static class RoadsterControlsValidation
                 case 6:
                     Check("Flat jump gains height",body.position.y-startHeight>1,"height gain="+(body.position.y-startHeight));
                     RoadsterAirportValidation.Capture("airport-flat-jump",body.position+new Vector3(6,2,-8),Quaternion.LookRotation(body.position-(body.position+new Vector3(6,2,-8))));
-                    // Keep Jump held through touchdown: it must not automatically bounce.
-                    next=Time.time+5;break;
+                    Check("Held Space continues upward thrust",V<float>("appliedLift")>.99f,"lift="+V<float>("appliedLift"));
+                    Jump(false);Event("ProcessPilotInput");
+                    Check("Jump release stops lift request immediately",V<float>("liftInput")==0,"lift request="+V<float>("liftInput"));
+                    next=Time.time+12;break;
                 case 7:
-                    Check("Held Space does not retrigger at touchdown",V<bool>("wasGrounded")&&!V<bool>("stuntJumpActive")&&Mathf.Abs(body.velocity.y)<1,"grounded="+V<bool>("wasGrounded")+" velocity="+body.velocity);
+                    Check("Released Space returns to ground without bounce",V<bool>("wasGrounded")&&!V<bool>("stuntJumpActive")&&Mathf.Abs(body.velocity.y)<1,"grounded="+V<bool>("wasGrounded")+" velocity="+body.velocity);
                     Neutral();Event("ToggleFlightMode");next=Time.time+.4f;break;
                 case 8:Jump(true);next=Time.time+.08f;break;
                 case 9:
                     Check("Manual flat-ground jump",V<bool>("manualFlight")&&body.velocity.y>4,"vertical velocity="+body.velocity.y);
                     Jump(false);next=Time.time+.4f;break;
                 case 10:
-                    Check("Manual re-arms after launch release",V<bool>("inputArmed"),V<string>("controlFeedback"));
+                    Check("Manual stays armed across launch",V<bool>("inputArmed"),V<string>("controlFeedback"));
                     AxisSample("W nose down uses rear pair",1,0);AxisSample("S nose up uses front pair",-1,0);
                     AxisSample("Q roll left uses right pair",0,-1);AxisSample("E roll right uses left pair",0,1);
-                    Neutral();Set("pitchInput",0f);Set("rollInput",0f);Set("inputArmed",true);Jump(true);Event("ProcessPilotInput");Jump(false);Event("ProcessPilotInput");
-                    Check("Manual air thrust releases immediately",V<float>("throttle")==0,"Space up -> zero throttle");
+                    Neutral();Set("pitchInput",0f);Set("rollInput",0f);Set("inputArmed",true);Set("desktopThrust",true);Event("ProcessPilotInput");Set("desktopThrust",false);Event("ProcessPilotInput");
+                    Check("Manual air thrust releases immediately",V<float>("throttle")==0,"Ctrl up -> zero forward throttle");
                     Neutral();Event("Recover");Event("ExitVehicle");next=Time.time+1;break;
                 case 11:
                     Check("Fleet count remains 32",UnityEngine.Object.FindObjectsOfType<RoadsterVehicle>(true).Length==32,"shared fleet preserved");

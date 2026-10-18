@@ -34,6 +34,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public float inputDeadzone = .12f;
     public int sensitivityProfile = 1; // 0 comfort, 1 normal, 2 direct (local preference)
     public bool showControlHelp = true;
+    private bool alternateControlGuide;
     [HideInInspector] public string controlFeedback = "READY";
     private float feedbackUntil;
     private float recoverArmedUntil;
@@ -49,7 +50,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
     private bool previousJumpHeld, stuntJumpActive;
     private float jumpPulseUntil;
     private float moveVertical, moveHorizontal, desktopRoll;
-    private bool jumpHeld, rightUseHeld, leftUseHeld, rightGrabHeld, desktopBrake;
+    private bool jumpHeld, rightUseHeld, leftUseHeld, rightGrabHeld, desktopBrake, desktopThrust;
+    private bool manualAxesAwaitNeutral;
     private bool inputArmed, vrInput, yokeHeld;
     private float lastControlFrame;
     private float neutralSince, pitchInput, rollInput, rawPitch, rawRoll, liftInput;
@@ -335,6 +337,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         rawThrottle=0; rawSteering=0; throttle=0; steering=0;
         rawPitch=0; rawRoll=0; pitchInput=0; rollInput=0; liftInput=0; appliedLift=0;
         inputArmed=false; yokeHeld=false; neutralSince=Time.time;
+        manualAxesAwaitNeutral=false;
         // Preserve observed held inputs: neutral must be observed before rearming.
     }
     private void ReleaseYoke()
@@ -372,7 +375,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!IsLocalDriver()) return;
         if (Networking.LocalPlayer.isSuspended) { ClearInput(); return; }
         bool neutral = Mathf.Abs(moveHorizontal)<=inputDeadzone && (vrInput || Mathf.Abs(moveVertical)<=inputDeadzone)
-            && !jumpHeld && !rightUseHeld && !leftUseHeld && !rightGrabHeld && !desktopBrake && Mathf.Abs(desktopRoll)<.01f;
+            && !jumpHeld && !rightUseHeld && !leftUseHeld && !rightGrabHeld && !desktopBrake && !desktopThrust && Mathf.Abs(desktopRoll)<.01f;
         if (!inputArmed)
         {
             if (!neutral) neutralSince=Time.time;
@@ -384,6 +387,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
             return;
         }
         bool manualAir = manualFlight && !wasGrounded;
+        if(manualAxesAwaitNeutral && Mathf.Abs(moveVertical)<=inputDeadzone && Mathf.Abs(moveHorizontal)<=inputDeadzone && Mathf.Abs(desktopRoll)<.01f)
+            manualAxesAwaitNeutral=false;
         rawSteering=moveHorizontal; rawPitch=0; rawRoll=0; rawThrottle=0;
         bool brakeRequested=false;
         if (vrInput)
@@ -408,14 +413,15 @@ public class RoadsterVehicle : UdonSharpBehaviour
         }
         else if (manualAir)
         {
-            rawPitch=moveVertical; rawRoll=-desktopRoll;
+            rawPitch=manualAxesAwaitNeutral ? 0f : moveVertical; rawRoll=manualAxesAwaitNeutral ? 0f : -desktopRoll;
             brakeRequested=desktopBrake;
-            rawThrottle=brakeRequested ? -1f : jumpHeld ? 1f : 0f;
+            rawThrottle=brakeRequested ? -1f : desktopThrust ? 1f : 0f;
         }
         else
         {
-            rawThrottle=moveVertical; brakeRequested=rawThrottle<0;
+            rawThrottle=manualAxesAwaitNeutral ? 0f : moveVertical; brakeRequested=rawThrottle<0;
         }
+        if(manualAxesAwaitNeutral)rawSteering=0f;
         float axis=ShapeInput(rawSteering);
         float gain=sensitivityProfile==0 ? .65f : sensitivityProfile==1 ? .85f : 1f;
         float targetSteer=Mathf.Sign(axis)*Mathf.Pow(Mathf.Abs(axis),1.4f)*gain;
@@ -426,7 +432,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         throttle=targetThrottle==0f ? 0f : Mathf.MoveTowards(throttle,targetThrottle,(targetThrottle<0 ? 10f : 6f)*Time.fixedDeltaTime);
         pitchInput=Mathf.MoveTowards(pitchInput,manualAir ? ShapeInput(rawPitch)*gain : 0f,6f*Time.fixedDeltaTime);
         rollInput=Mathf.MoveTowards(rollInput,manualAir ? ShapeInput(rawRoll)*gain : 0f,6f*Time.fixedDeltaTime);
-        float liftTarget=jumpHeld && !manualFlight && !brakeRequested && (!vrInput || yokeHeld) ? 1f : 0f;
+        float liftTarget=jumpHeld && !brakeRequested && (!vrInput || yokeHeld) ? 1f : 0f;
         if (brakeRequested || liftTarget==0f) liftInput=0f;
         liftInput=Mathf.MoveTowards(liftInput,liftTarget,6f*Time.fixedDeltaTime);
     }
@@ -463,6 +469,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
     }
     public string GetProfileName() { return sensitivityProfile==0 ? "COMFORT" : sensitivityProfile==1 ? "NORMAL" : "DIRECT"; }
     public void ToggleControlHelp() { showControlHelp=!showControlHelp; }
+    public void ToggleGuideDevice() { alternateControlGuide=!alternateControlGuide; showControlHelp=true; }
+    public bool IsVRControlGuide() { return GetInputName().StartsWith("VR") != alternateControlGuide; }
     public float GetDisplaySteering() { return Networking.IsOwner(gameObject) ? steering : ((netControl & 255)-127)/127f; }
     public float GetDisplayThrottle() { return Networking.IsOwner(gameObject) ? throttle : (((netControl>>8) & 255)-127)/127f; }
     public float GetFanAcceleration() { return Networking.IsOwner(gameObject) ? fanAcceleration : (hasSnapshot && Time.time-snapshotTime<.6f ? ((netControl>>16)&255)/255f*19.62f : 0f); }
@@ -501,6 +509,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
             ReleaseDesktopKeys();
             desktopRoll=(Input.GetKey(KeyCode.E) ? 1f : 0f)-(Input.GetKey(KeyCode.Q) ? 1f : 0f);
             desktopBrake=Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            desktopThrust=Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
         }
         if (pendingSeat && Time.time - seatRequestTime > 3f) { pendingSeat = false; SetFeedback("REQUEST TIMED OUT / TRY AGAIN"); }
         if (!Networking.IsOwner(gameObject) && hasSnapshot)
@@ -564,7 +573,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         // Only bridge a small suspension gap while already following the surface.
         // A deliberate launch releases suction and the extended contact probes.
         if((jumpPressed && inputArmed && surfaceUp.y>.85f && throttle>=0f && (!vrInput || yokeHeld))
-            || (flightAllowed && liftInput>.01f)) fanReleaseUntil=Time.time+.35f;
+            || ((flightAllowed || stuntJumpActive) && liftInput>.01f)) fanReleaseUntil=Time.time+.35f;
         float probeDistance=rideDistance+(wasGrounded && Time.time>=fanReleaseUntil ? fanContactExtension : 0f);
         for (int i = 0; i < suspensionPoints.Length; i++)
         {
@@ -581,8 +590,11 @@ public class RoadsterVehicle : UdonSharpBehaviour
         }
         if (manualFlight && wasGrounded != (hits>=2))
         {
-            ClearInput();
-            SetFeedback("MANUAL GROUND/AIR CHANGE / RELEASE INPUTS");
+            // Keep Jump and the VR grip live across takeoff. Only remapped keyboard
+            // axes wait for neutral, so W held as ground throttle cannot become pitch.
+            manualAxesAwaitNeutral=!vrInput;
+            rawThrottle=0;throttle=0;rawSteering=0;steering=0;rawPitch=0;rawRoll=0;pitchInput=0;rollInput=0;
+            SetFeedback(vrInput ? "MANUAL / JUMP LIFT + WRIST ATTITUDE" : "MANUAL / RELEASE W S A D Q E / SPACE MAY STAY HELD");
         }
         if (hits >= 2)
         {
@@ -624,7 +636,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
             body.AddForce(roadRight*Mathf.Clamp(grip,-normalLoad*1.5f,normalLoad*1.5f),ForceMode.Acceleration);
             float yaw = steering * Mathf.Clamp(forwardSpeed / 12f, -1f, 1f) * 1.2f;
             body.AddTorque(Vector3.Cross(transform.up, surfaceUp) * 36f - body.angularVelocity * 8f + surfaceUp * yaw * 8f, ForceMode.Acceleration);
-            if (flightAllowed && !manualFlight && liftInput>.01f && body.position.y<flightCeiling)
+            if ((flightAllowed || stuntJumpActive) && liftInput>.01f && body.position.y<flightCeiling && surfaceUp.y>.85f)
             {
                 appliedLift=liftInput;
                 body.AddForce(Vector3.up*jumpAcceleration*liftInput,ForceMode.Acceleration);
@@ -632,8 +644,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
             if (jumpPressed && inputArmed && (!vrInput || yokeHeld) && throttle>=0f
                 && Vector3.Dot(normalSum.normalized,Vector3.up)>.85f && body.position.y<flightCeiling)
             {
-                // A single flat-ground launch, independent of the gated flight section.
-                // Holding Space cannot retrigger it on landing: release, then press again.
+                // One launch impulse per press, followed by continuous held lift in air.
                 body.velocity+=Vector3.up*Mathf.Max(0f,groundJumpSpeed-Vector3.Dot(body.velocity,Vector3.up));
                 stuntJumpActive=true; jumpPulseUntil=Time.time+.18f;
             }
@@ -651,13 +662,20 @@ public class RoadsterVehicle : UdonSharpBehaviour
             // Hand descent to the landing controller, which already compensates gravity.
             // Keeping glide lift here can arrest a shallow descent before the wheels reach the road.
             if (landingAssistEnabled && groundClearance >= 0f && closingSpeed > .1f) lift = 0f;
-            appliedLift=flightAllowed && body.position.y<flightCeiling ? liftInput : 0f;
-            body.AddForce(Vector3.up * (lift - 9.81f + appliedLift*jumpAcceleration), ForceMode.Acceleration);
+            appliedLift=body.position.y<flightCeiling ? liftInput : 0f;
+            body.AddForce(Vector3.up * (lift - 9.81f), ForceMode.Acceleration);
+            body.AddForce(transform.up*appliedLift*jumpAcceleration,ForceMode.Acceleration);
             // Directional jets expose the same PD request that drives attitude assistance.
             thrusterDemand[6] = Mathf.Max(0f, throttle);
             body.AddForce(-body.velocity * 0.12f, ForceMode.Acceleration);
         }
-        else { motionMode = 4; body.AddForce(Vector3.down * 9.81f, ForceMode.Acceleration); }
+        else
+        {
+            motionMode = 4; body.AddForce(Vector3.down * 9.81f, ForceMode.Acceleration);
+            // The brief takeoff debounce must not interrupt a held thruster command.
+            if((flightAllowed || stuntJumpActive) && body.position.y<flightCeiling)
+            {appliedLift=liftInput;body.AddForce(transform.up*appliedLift*jumpAcceleration,ForceMode.Acceleration);}
+        }
         if (hits < 2)
         {
             ApplyAirAttitude();
@@ -699,6 +717,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
         float angle; Vector3 axis;
         error.ToAngleAxis(out angle, out axis);
         if (angle > 180f) angle -= 360f;
+        // Pitch/roll level hold is driven by the same command displayed by the
+        // differential four-nozzle mixer, even after the pilot releases Jump.
         Vector3 correction = angle == 0f ? Vector3.zero : axis * (angle * Mathf.Deg2Rad * attitudeStrength);
         Vector3 requested = correction - body.angularVelocity * attitudeDamping + Vector3.up * steering * 2.5f;
         requested = Vector3.ClampMagnitude(requested, maxAttitudeAcceleration);

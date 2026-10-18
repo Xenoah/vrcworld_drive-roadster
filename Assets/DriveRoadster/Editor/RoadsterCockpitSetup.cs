@@ -83,6 +83,11 @@ public static class RoadsterCockpitSetup
             Button(controls,new Vector2(245,-145),new Vector2(220,90),"VIEW +\n[PgUp]",9,vehicle,run,false);
         }
         run.inputText.rectTransform.anchoredPosition=new Vector2(-365,-235);
+        run.inputText.rectTransform.sizeDelta=new Vector2(475,65);
+        var guide=controls.Find("Control_11");
+        if(guide==null)run.guideToggleText=Button(controls,new Vector2(245,-235),new Vector2(220,65),"PC GUIDE\nPC / VR",11,vehicle,run,false);
+        else run.guideToggleText=guide.Find("Cap/Label").GetComponent<Text>();
+        run.guideToggleText.fontSize=24;
         run.helpText.rectTransform.anchoredPosition=new Vector2(-365,-455);
         run.helpText.rectTransform.sizeDelta=new Vector2(730,370);
         run.systemText.fontSize=25;run.systemText.rectTransform.sizeDelta=new Vector2(690,100);

@@ -20,19 +20,28 @@ TAは駐車場では始まりません。START手前の `STOP + T` 枠で停止�
 
 バンクは右カーブの外側（左端）を高くし、内側へ傾く向きに修正。低い側の路面も地面より上に保ち、路面・縁石・誘導線・コライダーを揃えました。キーボードを離すとスロットルは次の物理更新で即座に0になり、車体は惰性で進みます。Station内でSDK入力が残った場合も、実キーの解放で解除します。
 
-平地では **Spaceを1回押すとジャンプ**（Auto / Manual共通）。四隅の下向きノズルが一斉噴射します。空中姿勢を操作する場合は、地上で **F → Manual → キーを離す → Spaceでジャンプ → 離陸後も約0.15秒キーを離す** と操作可能になります。
+平地では **Spaceでジャンプし、長押し中は上昇スラスターを継続噴射**（Auto / Manual共通）。離すと上昇推力が止まり、慣性で上昇した後に降下します。Autoは空中のピッチ・ロールを四隅のスラスターで自動水平制御し、Spaceを離した後も続けます。Manualを使う場合は、地上で **F → Manual → 一度入力を離す → Spaceを長押し**。離陸時のW/S・A/D・Q/Eだけを一度中立に戻せば姿勢操作が有効になります。Spaceは離す必要がありません。
 
 | Manual空中操作 | 車体の動きと強く噴くノズル |
 |---|---|
 | W / S | 機首下げ / 上げ。後方2基 / 前方2基 |
 | Q / E | 左 / 右ロール。右側2基 / 左側2基 |
 | A / D | 左 / 右ヨー。対応する横向きノズル |
-| Space / Shift | 後方排気による前進推力 / 制動 |
+| Space長押し | 四隅の下向きノズルで継続上昇（Auto共通） |
+| Ctrl / Shift | 後方排気による前進推力 / 制動 |
 | F / L | Auto水平復帰へ切替 / 着陸補助ON・OFF |
 
-Manualは無入力で回転を減衰しますが、姿勢を自動で水平に戻しません。着地前に車体を起こしてください。Spaceの押しっぱなしでは着地時に再ジャンプしません。VRは右グリップでヨークを持ってJump、Manual空中は右手首でピッチ・ロールを操作します。入口の専用看板と車内Hヘルプにも掲載しています。
+Manualは無入力で回転を減衰しますが、姿勢を自動で水平に戻しません。着地前に車体を起こしてください。VRは右グリップでヨークを持ち、Jump長押しで継続上昇。Manual空中は右手首でピッチ・ロールを操作します。左右トリガーは前進・制動で、制動は上昇より優先します。入口に日本語のVR専用看板を追加。車内は入力方式に合わせてヘルプを表示し、**PC / VR** ボタンで両方のガイドを確認できます。ガイドを切り替えても操縦方式は変わりません。
 
-この修正のClientSim検証は22/22項目成功。バンク69断面の傾きと102地点の路面コライダー、入力解放、Auto/Manualの平地ジャンプ、ピッチ／ロール4方向とノズルの対応を検査しました。[検証結果](docs/validation/airport-controls.json)。キー押下とQ/Eは検証用入力を使用し、未押下状態での実キー解放判定も確認。実HMD・複数クライアントは未検証です。
+Touch系の標準Jumpは右手Aです。別のコントローラーや変更した割当では、VRChatに設定したJumpを使用します。[公式Touch操作](https://docs.vrchat.com/docs/touch)、[SteamVR入力設定](https://docs.vrchat.com/docs/steamvr-input-20)。
+
+看板だけの再生成は `python SourceAssets/build_airport_signs.py`、Unity配置は `Drive Roadster → Update PC and VR control guides`。継続噴射・Auto水平復帰・VR入力・ガイド切替のClientSim検証は **26/26項目成功**。検証入口は `RoadsterLiftValidation.Begin()`、結果は [airport-held-lift.json](docs/validation/airport-held-lift.json)。傾いた車体を実際の物理更新で水平へ戻し、前後左右の噴射差も確認。VRはSDKボタンと合成した手の追跡データを使用し、実HMD・複数クライアントは未検証です。
+
+![VR操作ガイド](docs/images/airport-vr-controller-sign.png)
+
+![車内VRガイド](docs/images/airport-cockpit-vr-guide.png)
+
+この修正のClientSim操縦検証は24/24項目成功。バンク69断面の傾きと102地点の路面コライダー、入力解放、Auto/Manualの平地ジャンプ、ピッチ／ロール4方向とノズルの対応を検査しました。[検証結果](docs/validation/airport-controls.json)。キー押下とQ/Eは検証用入力を使用し、未押下状態での実キー解放判定も確認。実HMD・複数クライアントは未検証です。
 
 ![正バンク](docs/images/airport-bank-corrected.png)
 
@@ -42,7 +51,7 @@ Manualは無入力で回転を減衰しますが、姿勢を自動で水平に�
 
 斜面では自動ファンが路面へ向けて最大 **2G（19.62m/s²）** を加え、実際の重力と別に計算します。8〜15度で立ち上がり、それ以上では最大出力。押し付け荷重に応じたタイヤの横グリップと姿勢追従で、垂直壁や逆さの路面でも接触を維持します。接地中だけ最大22cmのサスペンション隙間を補い、離陸要求時は解除、空中では吸着しません。車内にFANのG表示、共通のオリジナルファン音を追加。音は無人時・空中・遠距離では停止します。これはゲーム内の要求仕様としての2Gで、実車の内部機構を再現したものではありません。
 
-更新の再適用は `Drive Roadster → Update cockpit height and surface fans`、検証入口は `RoadsterSeatFanValidation.Begin()`。原音の生成は `SourceAssets/build_surface_fan_audio.py`。ClientSim **30/30項目成功**：[検証結果](docs/validation/airport-seat-fan.json)。車内ボタン、実際の着座頭部位置、58度バンク・90度壁・180度天井の一時検証路面、実コースの変化する傾斜、離陸・空中解除を確認しました。既存の操縦回帰試験22/22、Python静的・数理検査33/33も成功。実HMDと複数クライアントは未検証です。
+更新の再適用は `Drive Roadster → Update cockpit height and surface fans`、検証入口は `RoadsterSeatFanValidation.Begin()`。原音の生成は `SourceAssets/build_surface_fan_audio.py`。ClientSim **30/30項目成功**：[検証結果](docs/validation/airport-seat-fan.json)。車内ボタン、実際の着座頭部位置、58度バンク・90度壁・180度天井の一時検証路面、実コースの変化する傾斜、離陸・空中解除を確認しました。当時の操縦回帰試験22/22、Python静的・数理検査33/33も成功。実HMDと複数クライアントは未検証です。
 
 ![高さ調整付きの車内](docs/images/airport-raised-cockpit.png)
 
@@ -160,11 +169,11 @@ Unity Editor Play Mode / ClientSim。SDK入力イベントによるManualの区�
 | 地上制動 | S（停止後は後退） | 左人差し指トリガー。停止後に後退しない |
 | 地上操舵／空中yaw | A / D | 左スティック左右。右ヨーク保持中 |
 | Auto空中推力／制動 | W / S | 右／左人差し指トリガー |
-| 平地ジャンプ（両モード） | Spaceを1回押す | 右ヨーク保持中にJumpを1回押す |
-| Auto飛行区間での上昇 | Jump（標準Space）を保持 | Jumpを保持。右ヨーク保持中 |
+| 平地ジャンプ・継続上昇（両モード） | Space長押し | 右ヨーク保持中にJump長押し |
+| Auto水平制御 | 空中で自動。Spaceを離しても継続 | 同左 |
 | Manual空中pitch | W＝機首下げ、S＝機首上げ | 握った右手ヨークの前後傾き |
 | Manual空中roll | Q＝左、E＝右 | 握った右手ヨークの左右傾き |
-| Manual空中推力／制動 | Space / Shift | 右／左人差し指トリガー |
+| Manual空中推力／制動 | Ctrl / Shift | 右／左人差し指トリガー |
 | ヨーク取得／解放 | 不要 | ヨークの近くで右グリップ。解放または手を離すと解除 |
 | Auto / Manual | F / モードボタン | モードボタンをInteract |
 | 着陸補助ON / OFF | L / LANDINGボタン | LANDINGボタンをInteract |
@@ -172,13 +181,13 @@ Unity Editor Play Mode / ClientSim。SDK入力イベントによるManualの区�
 | TA / 感度 / ヘルプ | T / C / H、または車内ボタン | 車内ボタンをInteract |
 | 降車 | X / EXIT | 車内EXIT（キーボードXも可） |
 
-**VR左スティック前後は未使用**。右スティック／Lookイベントも操縦には使いません。ManualのVR Jumpには推力を重複割当しません。視点は通常のマウス／HMDに任せます。RはVRChat標準Action Menu用に空けました。
+**VR左スティック前後は未使用**。右スティック／Lookイベントも操縦には使いません。VR Jumpは両モードで上昇。前進は右トリガーへ独立して割り当てます。視点は通常のマウス／HMDに任せます。RはVRChat標準Action Menu用に空けました。
 
-平地ジャンプは飛行ゲートを通らず使えます。ジャンプ中は空中姿勢・前進推力・制動が使え、着地でジャンプ状態を終了します。Autoの継続上昇・滑空補助は **LAUNCH通過後の許可区間内のみ**。Jumpは降車に使いません。Manualでは無入力時の角速度を減衰しますが、水平へは戻しません。着陸補助はモードと独立し、Manualの姿勢を勝手に起こしません。強く傾いて補助できないときは `LANDING CHECK ATTITUDE` を表示します。
+平地ジャンプと長押しの継続上昇は飛行ゲートを通らず使えます。ジャンプ中は空中姿勢・前進推力・制動が使え、着地でジャンプ状態を終了します。速度に応じたAutoの滑空補助だけは **LAUNCH通過後の許可区間内のみ**。高度100mで上昇推力を切り、Jumpは降車に使いません。Manualでは無入力時の角速度を減衰しますが、水平へは戻しません。着陸補助はモードと独立し、Manualの姿勢を勝手に起こしません。強く傾いて補助できないときは `LANDING CHECK ATTITUDE` を表示します。
 
 右グリップのヨーク取得には両トリガーの解放が必要です。両トリガー同時はブレーキ優先で、正の推力を即座に解除します。右ヨーク解放・距離超過・車内パネル操作ではアクセルを切ります。再取得だけで押しっぱなしのアクセルが復活することはありません。
 
-乗車、リセット、Auto/Manual切替、着陸補助切替、パネル操作、Manualの地上／空中切替、所有権通知、入力方式の系統変更、SDK休止／長い処理中断では入力をクリアします。入力を中立に戻して0.15秒待ってから再開します。Keyboard↔Mouseの通常の切替だけでは操縦を解除しません。移動やJumpによるStation自動退出は無効で、EXITはパドックへ戻ります。速度2 m/s超のリセットは2秒以内の二度押しです。
+乗車、リセット、Auto/Manual切替、着陸補助切替、パネル操作、所有権通知、入力方式の系統変更、SDK休止／長い処理中断では入力をクリアします。入力を中立に戻して0.15秒待ってから再開します。Manualの地上／空中移行では、役割の変わるW/S・A/D・Q/Eだけ中立待ちにし、保持中のSpace・VRグリップは継続します。Keyboard↔Mouseの通常の切替だけでは操縦を解除しません。移動やJumpによるStation自動退出は無効で、EXITはパドックへ戻ります。速度2 m/s超のリセットは2秒以内の二度押しです。
 
 SDK 3.10.5は `Application.isFocused` をUdonへ公開していません。SDKの入力解除と休止・処理中断は処理しますが、実Alt-Tab、SteamVRダッシュボード、トラッキング喪失時の通知は未検証です。実HMDのリマップ、手の到達性、VR快適性も未検証。VRコントローラーの押下と手姿勢はClientSimの合成入力で検証しています。
 
@@ -206,7 +215,7 @@ Meta Touchの物理入力、OpenXRプロファイル、Udon公開イベントの
 |---|---|
 | `Assets/DriveRoadster/Scripts/RoadsterVehicle.cs` | 乗降、所有権、車両物理、入力、スナップショット同期 |
 | `Assets/DriveRoadster/Scripts/RoadsterRun.cs` | ゲート判定、タイマー、失格、参考記録、HUD |
-| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | 乗車と10種の車内 Interact、押下演出 |
+| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | 乗車と11種の車内 Interact、押下演出 |
 | `Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs` | FBX と manifest からシーン・座席・HUD・LOD を生成 |
 | `Assets/DriveRoadster/Editor/RoadsterCockpitSetup.cs` | 生計器、ボタン、乗車表示、可動部ピボットを生成 |
 | `Assets/DriveRoadster/Editor/RoadsterThrusterSetup.cs` | ノズル参照と3層のParticleSystem・白煙材質を生成 |

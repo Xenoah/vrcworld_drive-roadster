@@ -2,6 +2,14 @@
 
 調査日: 2026-10-17。Meta Horizon OSの公式入力APIとOpenXR仕様を照合した。Roadsterの実装はVRChatが公開するUdon入力イベントを使用する。Meta SDKやOpenXRプラグインをワールドへ追加して直接呼び出す構成ではない。
 
+## 2026-10-18 継続上昇と操作ガイドの更新
+
+- 右グリップでヨークを保持し、Jumpを長押しするとAuto/Manualとも上昇噴射を継続。右トリガーは前進、左トリガーは制動で、上昇とは独立しています。左制動・右グリップ解放・Jump解放で上昇入力を解除します。
+- Touch系の標準Jumpは右手A。他機種やリマップ済みの場合は現在のJump割当を使います。[VRChat公式Touch操作](https://docs.vrchat.com/docs/touch)、[SteamVR入力設定](https://docs.vrchat.com/docs/steamvr-input-20)。
+- Autoは空中でスラスターによるピッチ・ロール水平保持。Manualは握った右手の前後・左右傾きで姿勢操作し、左スティック左右でヨー。ヨークを離して車内のAUTO/LANDING/VIEW/EXIT等をInteractで操作します。
+- 入口に日本語VR専用看板を追加。車内は実際の入力方式に応じてガイドを選び、PC / VRボタンで別方式の説明も読めます。これは説明の切替であり、実入力の方式を変更しません。
+- 新しい検証結果は [airport-held-lift.json](validation/airport-held-lift.json)。VR識別・手位置はClientSim内の合成データです。以下の105項目は以前の実行履歴です。
+
 ## 物理入力とAPIの対応
 
 | 物理入力 | Meta OVRInputの明示的な左右指定例 | OpenXR入力パス | Roadsterで受け取るもの／用途 |

@@ -1,0 +1,136 @@
+{
+    "environment": "Unity ClientSim desktop; real Udon/PhysX; synthetic SDK Jump, movement and VR hand tracking/identity; no physical HMD or multiplayer clients",
+    "checks": [
+        {
+            "name": "VR controller board is present",
+            "passed": true,
+            "detail": "dedicated Japanese VR guide at entrance"
+        },
+        {
+            "name": "All 32 cars have PC/VR guide switch",
+            "passed": true,
+            "detail": "shared prefab controls"
+        },
+        {
+            "name": "Auto held Space keeps lift beyond launch pulse",
+            "passed": true,
+            "detail": "lift=1, height=6.240433"
+        },
+        {
+            "name": "Continuous lift runs all four down jets",
+            "passed": true,
+            "detail": "jets=1,1,0.9999787,0.9999787"
+        },
+        {
+            "name": "Auto tilt produces differential nozzle demand",
+            "passed": true,
+            "detail": "tilt=43.08246, command=(-2.25, 0.00, -3.11), jets=1,0.9402951,1,0.624782"
+        },
+        {
+            "name": "Auto restores level while Jump stays held",
+            "passed": true,
+            "detail": "tilt=0.09691329, lift=1"
+        },
+        {
+            "name": "Held lift continues outside flight gates",
+            "passed": true,
+            "detail": "height gained=58.5568"
+        },
+        {
+            "name": "Jump release clears lift immediately",
+            "passed": true,
+            "detail": "lift request=0"
+        },
+        {
+            "name": "Collective lift remains off after release",
+            "passed": true,
+            "detail": "attitude jets may still operate"
+        },
+        {
+            "name": "Auto attitude jets stay active after Jump release",
+            "passed": true,
+            "detail": "tilt=36.19284"
+        },
+        {
+            "name": "Auto returns to level without held Jump",
+            "passed": true,
+            "detail": "tilt=0.06852804"
+        },
+        {
+            "name": "Height ceiling cuts held lift",
+            "passed": true,
+            "detail": "height=100.5"
+        },
+        {
+            "name": "Manual held Jump survives takeoff",
+            "passed": true,
+            "detail": "lift=1"
+        },
+        {
+            "name": "Held ground W does not become air pitch",
+            "passed": true,
+            "detail": "pitch=0"
+        },
+        {
+            "name": "Axes rearm without releasing Space",
+            "passed": true,
+            "detail": "Jump remains held"
+        },
+        {
+            "name": "Manual pitch works alongside held lift",
+            "passed": true,
+            "detail": "pitch=0.85"
+        },
+        {
+            "name": "Ctrl forward thrust is separate from lift",
+            "passed": true,
+            "detail": "throttle=0.06666667"
+        },
+        {
+            "name": "Ctrl release clears forward thrust",
+            "passed": true,
+            "detail": "throttle=0"
+        },
+        {
+            "name": "VR Jump plus grip provides continuous lift",
+            "passed": true,
+            "detail": "synthetic hand + SDK Jump; lift=1"
+        },
+        {
+            "name": "VR automatically selects controller help",
+            "passed": true,
+            "detail": "R GRIP: grab yoke near steering wheel\nR INDEX: forward / L INDEX: brake\nHold JUMP + grip: jump / continuous lift\nTouch default: right A = JUMP\nOther bindings: use mapped Jump button\nLeft stick X: steering / yaw (Y unused)\nAUTO: thrusters keep pitch / roll level\nMANUAL: wrist tilt = pitch / roll\nRelease grip before panel Interact\nPanel: AUTO / LANDING / VIEW - or +\nEXIT: paddock / FAN: automatic on slopes\nPC / VR button: switch this guide"
+        },
+        {
+            "name": "VR left brake overrides held Jump",
+            "passed": true,
+            "detail": "lift=0"
+        },
+        {
+            "name": "VR lift resumes after brake release",
+            "passed": true,
+            "detail": "lift=1"
+        },
+        {
+            "name": "VR grip release cancels lift",
+            "passed": true,
+            "detail": "held Jump cannot bypass grip"
+        },
+        {
+            "name": "PC user can read VR guide without changing input mode",
+            "passed": true,
+            "detail": "guide selection only"
+        },
+        {
+            "name": "Guide switches back to PC controls",
+            "passed": true,
+            "detail": "Space HOLD: jump / continuous lift\nRelease Space: lift off, then descend\nAUTO: thrusters keep pitch / roll level\nGROUND + AUTO: W/S drive / brake\nA/D steer / yaw; keys up: coast\nMANUAL AIR: W/S pitch, Q/E roll\nCtrl forward thrust / Shift brake\nAfter takeoff: release W/S, A/D, Q/E\nF Auto/Manual / L landing assist\nPgUp/PgDn view / Home default\nFAN: automatic on slopes / up to 2 G\nT time attack / X exit / H help"
+        },
+        {
+            "name": "No runtime or Udon errors",
+            "passed": true,
+            "detail": ""
+        }
+    ],
+    "errors": []
+}
