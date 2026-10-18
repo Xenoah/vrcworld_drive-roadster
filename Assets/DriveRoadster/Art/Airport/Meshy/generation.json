@@ -1,0 +1,28 @@
+{
+  "provider": "Meshy",
+  "model": "meshy-t2.5",
+  "format": "fbx",
+  "target_polycount": 8000,
+  "texture_resolution": "2k",
+  "total_credits": 45,
+  "assets": [
+    {
+      "name": "ControlTower",
+      "preview": "01a14ecf-fc35-76c7-a55f-f08c344408cb",
+      "textured": "01a14ed1-bba6-73ba-89b9-26cf449c96f7",
+      "triangles": 7677
+    },
+    {
+      "name": "Hangar",
+      "preview": "01a14ed0-03b9-70c1-93b1-2d26c80ce76c",
+      "textured": "01a14ed1-c4ac-72ad-a537-e707f1b6afa7",
+      "triangles": 7092
+    },
+    {
+      "name": "Terminal",
+      "preview": "01a14ed0-0ebe-70c4-84cb-1ba9c2bdac96",
+      "textured": "01a14ed1-cb16-76e5-a7cd-b41a127b8404",
+      "triangles": 6146
+    }
+  ]
+}

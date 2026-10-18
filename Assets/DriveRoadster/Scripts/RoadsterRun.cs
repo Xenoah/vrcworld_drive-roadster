@@ -6,6 +6,7 @@ using VRC.SDKBase;
 public class RoadsterRun : UdonSharpBehaviour
 {
     public RoadsterVehicle vehicle;
+    public Transform timeTrialStart;
     public Transform[] gates;
     public float[] gateHalfWidths;
     public float[] gateHalfHeights;
@@ -39,9 +40,10 @@ public class RoadsterRun : UdonSharpBehaviour
     public void BeginRun()
     {
         if (!vehicle.IsLocalDriver()) { vehicle.DriverOnlyFeedback(); return; }
-        if (Vector3.Distance(vehicle.body.position, vehicle.spawn.position) > 8f || vehicle.body.velocity.magnitude > 1f)
+        Transform staging = timeTrialStart != null ? timeTrialStart : vehicle.spawn;
+        if (Vector3.Distance(vehicle.body.position, staging.position) > 18f || vehicle.body.velocity.magnitude > 1f)
         { status = "Stop in the start box before starting"; RequestSerialization(); return; }
-        vehicle.Recover();
+        // Parking bays are independent of the course start; never teleport a run into another car.
         running = true; nextGate = 0; runId++; driverGeneration = vehicle.generation;
         startedAt = Networking.GetServerTimeInSeconds(); lastGateAt = startedAt;
         previousPosition = vehicle.body.position;
@@ -103,6 +105,7 @@ public class RoadsterRun : UdonSharpBehaviour
         if (now - lastGateAt < minimumInterval || (requiredModes[nextGate] > 0 && vehicle.motionMode != requiredModes[nextGate]))
         { running = false; status = "INVALID / gate time or drive mode"; RequestSerialization(); return; }
         lastGateAt = now;
+        if(nextGate==0)startedAt=now;
         if (nextGate == flightStartGate) vehicle.EnableFlight();
         if (nextGate == flightEndGate) vehicle.DisableFlight();
         nextGate++;
@@ -137,8 +140,9 @@ public class RoadsterRun : UdonSharpBehaviour
 
     void Update()
     {
-        if (!Utilities.IsValid(display) || Time.time < nextDisplay) return;
-        nextDisplay = Time.time + 0.1f;
+        if (Time.time < nextDisplay) return;
+        nextDisplay = Time.time + (vehicle.IsLocalDriver() ? 0.1f : .5f);
+        if(!vehicle.IsLocalDriver())return;
         float elapsed = running ? (float)(Networking.GetServerTimeInSeconds() - startedAt) : lastTime;
         string text = "DRIVE / ROADSTER\n" + status + "\n" + elapsed.ToString("F2") + " s  |  Gate " + nextGate + "/" + gates.Length;
         if (personalBest > 0f) text += "\nMY SESSION BEST " + personalBest.ToString("F2");
@@ -146,7 +150,7 @@ public class RoadsterRun : UdonSharpBehaviour
         for (int i = 0; i < times.Length; i++)
             if (times[i] > 0f) text += "\n" + (i + 1) + ". " + names[i] + "  " + times[i].ToString("F2");
         if (vehicle.showDiagnostics) text += "\nDriver " + vehicle.driverId + " gen " + vehicle.generation + " run " + runId + "\nLast send " + vehicle.lastSerializedBytes + " B / ok " + vehicle.lastSerializationSucceeded + " / failed " + vehicle.failedSerializations;
-        display.text = text;
+        if(Utilities.IsValid(display))display.text = text;
         UpdateCockpit(elapsed);
         if (Utilities.IsValid(cockpitDisplay)) cockpitDisplay.text = (vehicle.GetDisplaySpeed() * 3.6f).ToString("F0") + " km/h  |  MODE " + vehicle.motionMode + "\n" + elapsed.ToString("F2") + " s  CP " + nextGate + "/" + gates.Length + "\n" + status;
     }

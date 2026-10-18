@@ -1,0 +1,28 @@
+{
+  "scene": "Assets/DriveRoadster/Scenes/DriveRoadster.unity",
+  "dirty": false,
+  "cars": 32,
+  "bays": 32,
+  "sharedPrefabs": [
+    "Assets/DriveRoadster/Prefabs/Asterion_Shared.prefab"
+  ],
+  "gateCount": 14,
+  "buildings": 12,
+  "missingScripts": 0,
+  "musicClips": [
+    "Airport_BGM_01",
+    "Airport_BGM_02",
+    "Airport_BGM_03"
+  ],
+  "negativeGateScales": 0,
+  "renderShaders": [
+    {
+      "name": "DriveRoadster/CanopyGlassTwoSided",
+      "errors": []
+    },
+    {
+      "name": "DriveRoadster/WorldText",
+      "errors": []
+    }
+  ]
+}

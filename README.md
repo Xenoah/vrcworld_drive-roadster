@@ -1,8 +1,32 @@
 # Drive Roadster — VRChat world
 
-オリジナルの電動スポーツカー **DR Asterion** で、海上コースの地上・バンク・飛行区間を走る PC / PCVR 向け試作ワールドです。共有車両は **1 台・運転席 1 席**。フリー走行と個人タイムアタックを実装しています。
+オリジナルの電動スポーツカー **DR Asterion** で空港コースを走る PC / PCVR 向けワールドです。スポーン横に **32台（各1席）** を配置し、フリー走行と個人タイムアタックを実装しています。
 
-## 検証状態
+## 2026-10-18 空港コース更新
+
+保存シーンは `Assets/DriveRoadster/Scenes/DriveRoadster.unity`。更新前の編集中シーンを `BeforeAirport_20261018.unity` に保全しています。
+
+- 敷地1,800×1,600m、メインコース約3,293m、順序付き14ゲート。滑走路・S字・バンク・ヘアピン・飛行区間と、別の天井走行／垂直カール練習区画があります。
+- Meshyの管制塔・格納庫・ターミナル3種類を12棟として配置。meshy-t2.5、2K PBR、FBX。実測6,146～7,677三角形／種類、承認済み45クレジットを使用しました。生成IDは `Art/Airport/Meshy/generation.json`。
+- 共通 `Prefabs/Asterion_Shared.prefab` を32台で使用し、共通車体・LOD・内装・音源を参照。番号付きアクセントのテクスチャ／マテリアルのみ各車で変更。旧コース上の車はアクティブシーンから撤去しました。
+- [指定されたTesla動画](https://www.youtube.com/watch?v=r5vsHHPVhJg)を参考に、オリジナル合成のEV音・走行風・ガス噴射・着地音を搭載。動画の音声ファイルは配布アセットに含めていません。スモークを増量し、各車最大2,560粒子、160m以遠では新規放出を抑制します。
+- 座席基準を0.53mから0.30mへ低下。乗車時に一度だけ実際の頭の高さから補正し、設計視点0.98mへ合わせます。その後のHMDの動きには追従補正しません。ルーフ内張りと両面ガラス、2cm近クリップの参照カメラを設定しました。
+- START/FINISH等の文字を正向き・両面のUnity文字へ置換。文字用シェーダーで背面文字の透け重なりを修正しました。入口に日本語操作ガイド・コース図を配置しています。
+- オリジナルのエレクトロBGM3曲と、入口のローカルON/OFF・曲送り・音量操作盤を実装。音楽は各プレイヤー個別で、他人の設定を変更しません。
+
+TAは駐車場では始まりません。START手前の `STOP + T` 枠で停止しTを押して、スタートを横切ると時計が始まります。Backspace／RESETは各車固有の駐車枠へ、EXITは入口へ戻ります。
+
+**検証:** C#・UdonSharpコンパイル成功。ClientSimによる新機能27/27項目成功、メイン路面242地点のコライダー検査成功。実際のClientSim着座視点は車体基準Y=0.98m。結果は `docs/validation/airport-clientsim.json` と `airport-road-colliders.json`。実HMD、32人同時のネットワーク、連続した全周走行、VRChat Build & Test／アップロードは未実施です。
+
+![32台のスポーン駐車場](docs/images/airport-fleet-detail.png)
+
+![増量した白煙](docs/images/airport-clientsim-smoke.png)
+
+再生成は `Drive Roadster → Upgrade to 32 car airport`。これは現在のDriveRoadsterWorld配下のコースを置き換えます。旧試作向けの `Build vertical slice scene` は下記の旧コースを生成する別機能です。原音・番号テクスチャ・入口看板は `SourceAssets/build_airport_assets.py`、空港形状と配置は `RoadsterAirportUpgrade.cs`、新機能検証は `RoadsterAirportValidation.Begin()` で再現できます。
+
+## 2026-10-17 旧コースの検証履歴
+
+以下は以前の1台・海上コースの記録です。車両物理と入力の説明は引き継いでいますが、配置・コース・音・視点・同期の無人時更新間隔は上記の更新が優先します。
 
 2026-10-17、Windows 上の **Unity 2022.3.22f1 / VRChat SDK 3.10.5** で C#・UdonSharp コンパイルとシーン構築を実施しました。**ClientSim の区間スモーク試験 105/105 項目成功**。乗降、直線加速、タイムアタックの START 通過、リセット、バンク接地、LAUNCH 通過からのアシスト飛行、不連続移動による失格、姿勢補助・3層白煙・着陸補助を確認しています。車内計器、Auto/Manual、独立3軸、左右トリガーのブレーキ優先、仮想ヨーク、入力解除、独立着陸補助、EXITも検証しました。デスクトップのQ/E・Shiftはキー状態の注入、VRは合成したSDK識別・右手追跡データを含む試験です。
 

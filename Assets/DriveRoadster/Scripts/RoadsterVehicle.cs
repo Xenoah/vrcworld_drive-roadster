@@ -20,6 +20,12 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public Transform[] throttlePedals;
     public Transform[] brakePedals;
     public Transform cockpitEye;
+    public float seatBaseHeight = .30f;
+    [UdonSynced] private float seatHeightOffset;
+    public int fleetNumber = 1;
+    public GameObject[] cockpitPanels;
+    private float nextParkedVisual;
+    private bool idlePhysicsCleared;
     public UnityEngine.UI.Text boardingDisplay;
     public float inputDeadzone = .12f;
     public int sensitivityProfile = 1; // 0 comfort, 1 normal, 2 direct (local preference)
@@ -161,12 +167,29 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject) || driverId != player.playerId)
         { station.ExitStation(player); return; }
         localSeated = true;
+        idlePhysicsCleared=false;
         vrInput = player.IsUserInVR();
         inputMethodName = VRC.SDKBase.InputManager.GetLastUsedInputMethod().ToString();
         manualFlight = false; landingAssistEnabled = true;
         SetFeedback("RELEASE INPUTS / X OR EXIT TO PADDOCK");
         ClearInput();
         SetAuthorityPhysics(true);
+        SendCustomEventDelayedSeconds(nameof(CalibrateSeatHeight), .5f);
+    }
+
+    public void CalibrateSeatHeight()
+    {
+        if(!IsLocalDriver() || !Utilities.IsValid(cockpitEye) || body.velocity.magnitude>1f)return;
+        // One adjustment at boarding, never follow subsequent HMD head movement.
+        Vector3 head=transform.InverseTransformPoint(Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position);
+        seatHeightOffset=Mathf.Clamp(seatHeightOffset+cockpitEye.localPosition.y-head.y,-.85f,.35f);
+        ApplySeatHeight();RequestSerialization();
+    }
+    private void ApplySeatHeight()
+    {
+        if(!Utilities.IsValid(station) || !Utilities.IsValid(station.stationEnterPlayerLocation))return;
+        Vector3 p=station.stationEnterPlayerLocation.localPosition;p.y=seatBaseHeight+seatHeightOffset;
+        station.stationEnterPlayerLocation.localPosition=p;
     }
 
     public override void OnStationExited(VRCPlayerApi player)
@@ -204,6 +227,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     {
         if (!Networking.IsOwner(gameObject)) return;
         driverId = -1; generation++; motionMode = 0;
+        seatHeightOffset=0;ApplySeatHeight();
         if (Utilities.IsValid(run)) run.CancelRun();
         Recover();
     }
@@ -421,11 +445,16 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (yokes!=null) for(int i=0;i<yokes.Length;i++) if(Utilities.IsValid(yokes[i])) yokes[i].localRotation=manualFlight && motionMode>=3 ? Quaternion.Euler(axes.x*25f,0,axes.z*35f) : Quaternion.Euler(0,0,-steer*70f);
         if (throttlePedals!=null) for(int i=0;i<throttlePedals.Length;i++) if(Utilities.IsValid(throttlePedals[i])) throttlePedals[i].localRotation=Quaternion.Euler(Mathf.Max(0,pedal)*18f,0,0);
         if (brakePedals!=null) for(int i=0;i<brakePedals.Length;i++) if(Utilities.IsValid(brakePedals[i])) brakePedals[i].localRotation=Quaternion.Euler(Mathf.Max(0,-pedal)*18f,0,0);
-        if (Utilities.IsValid(boardingDisplay)) boardingDisplay.text="DRIVER ACCESS / "+(driverId>=0 ? "OCCUPIED" : "AVAILABLE")+"\n"+GetControlMessage()+"\nINTERACT / REQUEST SEAT";
+        if (Utilities.IsValid(boardingDisplay)) boardingDisplay.text="CAR "+fleetNumber.ToString("D2")+" / "+(driverId>=0 ? "OCCUPIED" : "AVAILABLE")+"\n"+GetControlMessage()+"\nINTERACT / REQUEST SEAT";
     }
 
     void Update()
     {
+        if(cockpitPanels!=null)for(int p=0;p<cockpitPanels.Length;p++)
+            if(cockpitPanels[p]!=null && cockpitPanels[p].activeSelf!=localSeated)cockpitPanels[p].SetActive(localSeated);
+        // Parked fleet stays quiet; snapshots still refresh for late joiners.
+        if(driverId<0 && !pendingSeat && Time.time<nextParkedVisual)return;
+        nextParkedVisual=Time.time+.25f;
         // Udon does not expose Application.isFocused. Supported menu release events,
         // suspension and long frame gaps disarm controls; OS focus delivery needs client testing.
         if (lastControlFrame>0f && Time.realtimeSinceStartup-lastControlFrame>.5f) ClearInput();
@@ -447,7 +476,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (IsLocalDriver() && Input.GetKeyDown(KeyCode.T) && Utilities.IsValid(run)) run.BeginRun();
         if (Networking.IsOwner(gameObject) && Time.time >= nextSync)
         {
-            nextSync = Time.time + (driverId >= 0 ? syncInterval : 1f);
+            nextSync = Time.time + (driverId >= 0 ? syncInterval : 5f + fleetNumber*.031f);
             PublishSnapshot();
         }
         if (localSeated && Input.GetKeyDown(KeyCode.X)) ExitVehicle();
@@ -468,9 +497,11 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) return;
         if (!IsLocalDriver())
         {
+            if(idlePhysicsCleared)return;
             ClearInput();
             body.velocity = Vector3.zero; body.angularVelocity = Vector3.zero;
             for (int i = 0; i < 7; i++) thrusterDemand[i] = 0;
+            body.Sleep();idlePhysicsCleared=true;
             return;
         }
         ProcessPilotInput();
@@ -635,6 +666,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     private void UpdateThrusterVisuals()
     {
         if (thrusterJets == null || thrusterJets.Length != 7) return;
+        if(Utilities.IsValid(Networking.LocalPlayer) && Vector3.Distance(Networking.LocalPlayer.GetPosition(),transform.position)>160f)return;
         bool owner = Networking.IsOwner(gameObject);
         bool fresh = owner || (hasSnapshot && Time.time - snapshotTime < .6f);
         for (int i = 0; i < 7; i++)
@@ -644,15 +676,15 @@ public class RoadsterVehicle : UdonSharpBehaviour
             visibleThrust[i] = Mathf.MoveTowards(visibleThrust[i], demand, Time.deltaTime * (demand > visibleThrust[i] ? 14f : 9f));
             EmitBudgeted(thrusterJets[i], i, Mathf.Sqrt(visibleThrust[i]) * 320f);
             if (thrusterSmoke != null && thrusterSmoke.Length == 7)
-                EmitBudgeted(thrusterSmoke[i], 7 + i, visibleThrust[i] * 120f);
+                EmitBudgeted(thrusterSmoke[i], 7 + i, visibleThrust[i] * 185f);
             if (i < 4 && groundMist != null && groundMist.Length == 4)
             {
                 RaycastHit hit;
                 Transform jet = thrusterJets[i].transform;
-                if (visibleThrust[i] > .02f && Physics.Raycast(jet.position, jet.forward, out hit, 3f, roadMask, QueryTriggerInteraction.Ignore))
+                if (visibleThrust[i] > .02f && Physics.Raycast(jet.position, jet.forward, out hit, 5f, roadMask, QueryTriggerInteraction.Ignore))
                 {
                     groundMist[i].transform.SetPositionAndRotation(hit.point + hit.normal * .06f, Quaternion.LookRotation(hit.normal));
-                    EmitBudgeted(groundMist[i], 14 + i, visibleThrust[i] * 55f * (1f - hit.distance / 3f));
+                    EmitBudgeted(groundMist[i], 14 + i, visibleThrust[i] * 115f * (1f - hit.distance / 5f));
                 }
             }
         }
@@ -728,6 +760,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public override void OnDeserialization()
     {
         if (Networking.IsOwner(gameObject)) return;
+        ApplySeatHeight();
         SetAuthorityPhysics(false);
         int receivedA = netThrusterA, receivedB = netThrusterB;
         if (!hasSnapshot || observedReset != resetSequence)

@@ -3,6 +3,7 @@
 [Oo]bj/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
+ClientSimStorage/
 [Bb]uilds/
 .vs/
 .idea/
@@ -24,7 +25,7 @@ artifacts/
 *.blend2
 .env
 
-# SDK-generated utility copies and serialized programs; keep only our 3 programs.
+# SDK-generated utility copies and serialized programs; keep our 6 programs.
 Assets/UdonSharp/
 Assets/UdonSharp.meta
 Assets/SerializedUdonPrograms/*
@@ -34,3 +35,9 @@ Assets/SerializedUdonPrograms/*
 !Assets/SerializedUdonPrograms/c0d343a65bfbf724892eb5761202ea13.asset.meta
 !Assets/SerializedUdonPrograms/c7a66e9277678084eb7a8d56257829a1.asset
 !Assets/SerializedUdonPrograms/c7a66e9277678084eb7a8d56257829a1.asset.meta
+!Assets/SerializedUdonPrograms/b15145cbf299fea41bec64730e91c02a.asset
+!Assets/SerializedUdonPrograms/b15145cbf299fea41bec64730e91c02a.asset.meta
+!Assets/SerializedUdonPrograms/dd3d1a00ce11d1340a8729797d135f60.asset
+!Assets/SerializedUdonPrograms/dd3d1a00ce11d1340a8729797d135f60.asset.meta
+!Assets/SerializedUdonPrograms/dd6e0e217f607054b838469a6bd9914c.asset
+!Assets/SerializedUdonPrograms/dd6e0e217f607054b838469a6bd9914c.asset.meta

@@ -1,0 +1,141 @@
+{
+    "environment": "Unity Editor ClientSim; one local desktop simulated player; scripted inputs; no HMD or network clients",
+    "checks": [
+        {
+            "name": "32 initialized vehicle programs",
+            "passed": true,
+            "detail": "count=32"
+        },
+        {
+            "name": "32 distinct respawn bays",
+            "passed": true,
+            "detail": "shared references must not collapse"
+        },
+        {
+            "name": "Each vehicle run belongs to its own car",
+            "passed": true,
+            "detail": "clone-local Udon references"
+        },
+        {
+            "name": "Local player initialized",
+            "passed": true,
+            "detail": "ClientSim"
+        },
+        {
+            "name": "Parked fleet has no motor or gas voices",
+            "passed": true,
+            "detail": "no 32-car idle chorus"
+        },
+        {
+            "name": "BGM starts with an assigned clip",
+            "passed": true,
+            "detail": "track=Airport_BGM_01"
+        },
+        {
+            "name": "BGM track advance",
+            "passed": true,
+            "detail": "track=Airport_BGM_02"
+        },
+        {
+            "name": "Local BGM mute pauses audio",
+            "passed": true,
+            "detail": "independent local playback"
+        },
+        {
+            "name": "Local BGM resume",
+            "passed": true,
+            "detail": "playback restored"
+        },
+        {
+            "name": "BGM minimum clamp",
+            "passed": true,
+            "detail": "volume=0"
+        },
+        {
+            "name": "BGM maximum clamp",
+            "passed": true,
+            "detail": "volume=0.6"
+        },
+        {
+            "name": "Board driver station",
+            "passed": true,
+            "detail": "driverId=1"
+        },
+        {
+            "name": "Seated eye is below roof",
+            "passed": true,
+            "detail": "actual ClientSim local head=(-0.40, 0.98, -0.06)"
+        },
+        {
+            "name": "Time attack cannot start in parking bays",
+            "passed": true,
+            "detail": "Stop in the start box before starting"
+        },
+        {
+            "name": "Time attack staging does not teleport to bay",
+            "passed": true,
+            "detail": "position=(-280.00, 0.18, -284.00)"
+        },
+        {
+            "name": "Vehicle accelerates along runway",
+            "passed": true,
+            "detail": "distance=61.06058 speed=45.56781"
+        },
+        {
+            "name": "Motor responds to acceleration",
+            "passed": true,
+            "detail": "volume=0.31 pitch=2.629114"
+        },
+        {
+            "name": "Swept START gate advances timer",
+            "passed": true,
+            "detail": "gate=1 TIME ATTACK"
+        },
+        {
+            "name": "Reset returns only to own bay",
+            "passed": true,
+            "detail": "position=(-530.00, 0.12, -288.00)"
+        },
+        {
+            "name": "Stopped motor becomes silent",
+            "passed": true,
+            "detail": "volume=1.065251E-05"
+        },
+        {
+            "name": "Flight and landing jets drive gas audio",
+            "passed": true,
+            "detail": "volume=0.3629371"
+        },
+        {
+            "name": "Increased smoke emits live particles",
+            "passed": true,
+            "detail": "smoke=148"
+        },
+        {
+            "name": "Exit returns player to entrance",
+            "passed": true,
+            "detail": "player=(-552.00, -0.02, -325.00)"
+        },
+        {
+            "name": "Unoccupied car resets after exit",
+            "passed": true,
+            "detail": "position=(-530.00, 0.12, -288.00)"
+        },
+        {
+            "name": "Car 32 has independent usable station",
+            "passed": true,
+            "detail": "car32 driver=1"
+        },
+        {
+            "name": "Car 32 reset uses bay 32",
+            "passed": true,
+            "detail": "body position=(-481.00, 0.12, -234.00)"
+        },
+        {
+            "name": "No runtime exceptions",
+            "passed": true,
+            "detail": ""
+        }
+    ],
+    "errors": []
+}
