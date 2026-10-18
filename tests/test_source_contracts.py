@@ -38,7 +38,9 @@ class SourceContracts(unittest.TestCase):
             self.assertIn(text, s)
     def test_source_files(self):
         files=list((ROOT/'Assets/DriveRoadster/Scripts').glob('*.cs'))
-        self.assertEqual(len(files),3)
+        required={'RoadsterVehicle.cs','RoadsterRun.cs','RoadsterAction.cs',
+                  'RoadsterAudio.cs','RoadsterMusic.cs','RoadsterMusicButton.cs'}
+        self.assertTrue(required.issubset({p.name for p in files}))
         for p in files:
             self.assertIn('UdonSharpBehaviour',p.read_text(encoding="utf-8"))
     def test_fbx_headers(self):

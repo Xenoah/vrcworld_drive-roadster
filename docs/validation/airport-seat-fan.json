@@ -1,0 +1,156 @@
+{
+    "environment": "Unity ClientSim desktop; real Udon/PhysX ticks on temporary 58/90/180 degree surfaces; scripted controls; no HMD or multiplayer clients",
+    "checks": [
+        {
+            "name": "All 32 cars share raised reference and height controls",
+            "passed": true,
+            "detail": "32 shared prefab instances"
+        },
+        {
+            "name": "Parked fan voices are silent",
+            "passed": true,
+            "detail": "32 sources stopped"
+        },
+        {
+            "name": "Unseated caller cannot move seat",
+            "passed": true,
+            "detail": "driver guard"
+        },
+        {
+            "name": "Boarding aligns default eye to 1.08 m",
+            "passed": true,
+            "detail": "local head=1.078804"
+        },
+        {
+            "name": "Cockpit plus button raises actual head 2 cm",
+            "passed": true,
+            "detail": "delta=0.01999998"
+        },
+        {
+            "name": "Height changes calibrated station offset",
+            "passed": true,
+            "detail": "seat delta=0.02"
+        },
+        {
+            "name": "Upper height limit stays under roof",
+            "passed": true,
+            "detail": "head=1.118804"
+        },
+        {
+            "name": "Lower height limit is 0.96 m",
+            "passed": true,
+            "detail": "head=0.9588042"
+        },
+        {
+            "name": "Default button restores calibrated view",
+            "passed": true,
+            "detail": "head=1.078804"
+        },
+        {
+            "name": "Flat ground leaves suction off",
+            "passed": true,
+            "detail": "fan=0"
+        },
+        {
+            "name": "58 degree bank maintains wheel contact",
+            "passed": true,
+            "detail": "gap=-0.08867148, alignment=0.9999997, travel=29.02157"
+        },
+        {
+            "name": "58 degree bank applies 2 G into surface",
+            "passed": true,
+            "detail": "fan=19.62, direction=(0.85, -0.53, 0.00)"
+        },
+        {
+            "name": "58 degree bank coasts without key input",
+            "passed": true,
+            "detail": "travel=29.02157, speed=11.12914"
+        },
+        {
+            "name": "58 degree bank fan sound is active",
+            "passed": true,
+            "detail": "playing=True, volume=0.48"
+        },
+        {
+            "name": "Actual airport bank follows changing slope",
+            "passed": true,
+            "detail": "grounded=True, collider=AirportCircuit, travel=32.78251"
+        },
+        {
+            "name": "Actual bank fan follows road normal",
+            "passed": true,
+            "detail": "fan=19.62"
+        },
+        {
+            "name": "Vertical wall maintains wheel contact",
+            "passed": true,
+            "detail": "gap=-0.0701599, alignment=0.9999998, travel=28.89786"
+        },
+        {
+            "name": "Vertical wall applies 2 G into surface",
+            "passed": true,
+            "detail": "fan=19.62, direction=(1.00, 0.00, 0.00)"
+        },
+        {
+            "name": "Vertical wall coasts without key input",
+            "passed": true,
+            "detail": "travel=28.89786, speed=11.13285"
+        },
+        {
+            "name": "Vertical wall fan sound is active",
+            "passed": true,
+            "detail": "playing=True, volume=0.48"
+        },
+        {
+            "name": "Inverted surface maintains wheel contact",
+            "passed": true,
+            "detail": "gap=-0.03504944, alignment=1, travel=29.02142"
+        },
+        {
+            "name": "Inverted surface applies 2 G into surface",
+            "passed": true,
+            "detail": "fan=19.62, direction=(0.00, 1.00, 0.00)"
+        },
+        {
+            "name": "Inverted surface coasts without key input",
+            "passed": true,
+            "detail": "travel=29.02142, speed=11.12914"
+        },
+        {
+            "name": "Inverted surface fan sound is active",
+            "passed": true,
+            "detail": "playing=True, volume=0.48"
+        },
+        {
+            "name": "Fan strength packs into existing snapshot",
+            "passed": true,
+            "detail": "quantized fan=255"
+        },
+        {
+            "name": "Airborne car releases suction",
+            "passed": true,
+            "detail": "fan=0"
+        },
+        {
+            "name": "Fan sound fades out in air",
+            "passed": true,
+            "detail": "volume=0.002210576"
+        },
+        {
+            "name": "Flat jump releases suction",
+            "passed": true,
+            "detail": "fan=0, upward velocity=7.328101"
+        },
+        {
+            "name": "Exit stops fan and resets station",
+            "passed": true,
+            "detail": "fan playing=False"
+        },
+        {
+            "name": "No Udon or runtime errors",
+            "passed": true,
+            "detail": ""
+        }
+    ],
+    "errors": []
+}

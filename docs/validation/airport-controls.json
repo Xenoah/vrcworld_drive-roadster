@@ -49,22 +49,22 @@
         {
             "name": "Auto flat-ground jump without flight gate",
             "passed": true,
-            "detail": "vertical velocity=7.327957"
+            "detail": "vertical velocity=7.2196"
         },
         {
             "name": "Jump fires four downward nozzles",
             "passed": true,
-            "detail": "four jets=1,1,0.9999996,0.9999996"
+            "detail": "four jets=1,1,0.9998403,0.9998403"
         },
         {
             "name": "Flat jump gains height",
             "passed": true,
-            "detail": "height gain=2.553862"
+            "detail": "height gain=2.555192"
         },
         {
             "name": "Held Space does not retrigger at touchdown",
             "passed": true,
-            "detail": "grounded=True velocity=(0.00, 0.00, -0.01)"
+            "detail": "grounded=True velocity=(0.00, 0.00, 0.00)"
         },
         {
             "name": "Manual flat-ground jump",

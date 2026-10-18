@@ -167,7 +167,8 @@ public class RoadsterRun : UdonSharpBehaviour
         lapText.text=(running ? "LAP 1 / 1   " : "FREE DRIVE   ")+elapsed.ToString("F2")+" s\nCP "+nextGate+" / "+gates.Length+"    BEST "+(personalBest>0 ? personalBest.ToString("F2")+" s" : "--");
         Vector3 landing=vehicle.GetLandingTelemetry();
         string landingState=!vehicle.landingAssistEnabled ? "LANDING  OFF" : mode<3 ? "LANDING  STANDBY" : landing.z>.5f ? "LANDING  BRAKING "+landing.z.ToString("F1") : Vector3.Dot(transform.up,Vector3.up)<.35f ? "LANDING  CHECK ATTITUDE" : "LANDING  ARMED";
-        systemText.text=(vehicle.manualFlight ? "MANUAL / RATE DAMPING" : "AUTO / LEVEL ASSIST")+"\n"+landingState;
+        float fanG=vehicle.GetFanAcceleration()/9.81f;
+        systemText.text=(vehicle.manualFlight ? "MANUAL / RATE DAMPING" : "AUTO / LEVEL ASSIST")+"\n"+landingState+"\nFAN "+(fanG>.01f ? fanG.ToString("F1")+" G / SURFACE GRIP" : "STANDBY");
         float pitch=Mathf.Asin(Mathf.Clamp(transform.forward.y,-1f,1f))*Mathf.Rad2Deg;
         float roll=Mathf.Atan2(transform.right.y,transform.up.y)*Mathf.Rad2Deg;
         attitudeText.text="PITCH "+pitch.ToString("F0")+"  ROLL "+roll.ToString("F0")+"\nH "+(landing.x<0 ? "--" : landing.x.ToString("F1"))+" m  DOWN "+landing.y.ToString("F1")+" m/s";
@@ -187,7 +188,7 @@ public class RoadsterRun : UdonSharpBehaviour
         if(Utilities.IsValid(inputText)) inputText.text=vehicle.GetInputName()+"\n"+vehicle.GetInputMethodName();
         bool vr=vehicle.GetInputName().StartsWith("VR");
         string help=vr ? "RIGHT GRIP: hold yoke near wheel\nR INDEX: thrust  L INDEX: brake\nFLAT GROUND: tap Jump with grip\nMANUAL AIR: yoke pitch / roll\nLEFT X: yaw / steer  LEFT Y: unused\nAUTO: Jump lift in flight zone\nJUMP: 4 down jets / attitude: pairs\nRelease grip before using panel" : "GROUND: W/S drive  A/D steer\nKEY RELEASE: throttle 0 / coast\nFLAT GROUND: tap Space to jump\nF MANUAL, jump, release keys briefly\nAIR: W nose down / S nose up\nQ roll left / E right, A/D yaw\nSpace thrust / Shift brake / L land\n4 down jets: jump / pairs: attitude";
-        helpText.text=vehicle.showControlHelp ? help+"\nT time attack  X EXIT  H help\nRelease inputs after mode / reset" : "HELP H / INTERACT TO SHOW CONTROLS\nEXIT always returns to the paddock";
+        helpText.text=vehicle.showControlHelp ? help+"\nVIEW: PgUp / PgDn, Home default\nFAN: auto on slopes / up to 2 G\nT time attack  X EXIT  H help\nRelease inputs after mode / reset" : "HELP H / INTERACT TO SHOW CONTROLS\nEXIT always returns to the paddock";
     }
 
 }

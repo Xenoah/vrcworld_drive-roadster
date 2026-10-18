@@ -6,7 +6,7 @@ using VRC.SDKBase;
 public class RoadsterAudio : UdonSharpBehaviour
 {
     public RoadsterVehicle vehicle;
-    public AudioSource motor, rolling, gas, impact;
+    public AudioSource motor, rolling, gas, impact, fan;
     private float nextTick;
     private bool wasAir;
     private float previousSpeed;
@@ -24,6 +24,8 @@ public class RoadsterAudio : UdonSharpBehaviour
         SetLoop(motor,active ? Mathf.Clamp01(speed/8f)*(.12f+.19f*pedal) : 0,.55f+speed*.046f);
         SetLoop(rolling,active && !air ? Mathf.Clamp01(speed/55f)*.27f : 0,.7f+speed*.012f);
         SetLoop(gas,active ? Mathf.Sqrt(jet)*.65f : 0,.88f+jet*.16f);
+        float suction=vehicle.GetFanAcceleration()/19.62f;
+        SetLoop(fan,active ? suction*.48f : 0,.7f+suction*.3f);
         if(active && wasAir && !air && previousSpeed>2 && Utilities.IsValid(impact)) impact.Play();
         wasAir=air; previousSpeed=speed;
     }

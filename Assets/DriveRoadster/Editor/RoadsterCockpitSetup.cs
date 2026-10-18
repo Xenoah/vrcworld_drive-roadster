@@ -67,6 +67,29 @@ public static class RoadsterCockpitSetup
         var leather=AssetDatabase.LoadAssetAtPath<Material>("Assets/DriveRoadster/Art/GeneratedMaterials/DR_IvoryMicrofiber.mat");
         if(leather!=null) { leather.color=new Color(.78f,.80f,.81f);leather.SetFloat("_Metallic",0);leather.SetFloat("_Glossiness",.23f);EditorUtility.SetDirty(leather); }
     }
+    public static void AddViewControls(RoadsterVehicle vehicle)
+    {
+        var run=vehicle.run;var controls=vehicle.transform.Find("DriverControls");
+        if(controls==null)return;
+        controls.localPosition=new Vector3(.12f,.89f,.10f);
+        controls.localRotation=Quaternion.LookRotation(-(vehicle.cockpitEye.localPosition-controls.localPosition).normalized,Vector3.up);
+        var backing=controls.Find("Backing").GetComponent<RectTransform>();
+        backing.sizeDelta=new Vector2(800,1210);backing.anchoredPosition=new Vector2(0,-55);
+        controls.GetComponent<RectTransform>().sizeDelta=new Vector2(800,1210);
+        if(controls.Find("Control_8")==null)
+        {
+            Button(controls,new Vector2(-245,-145),new Vector2(220,90),"VIEW -\n[PgDn]",8,vehicle,run,false);
+            Button(controls,new Vector2(0,-145),new Vector2(220,90),"DEFAULT\n[Home]",10,vehicle,run,false);
+            Button(controls,new Vector2(245,-145),new Vector2(220,90),"VIEW +\n[PgUp]",9,vehicle,run,false);
+        }
+        run.inputText.rectTransform.anchoredPosition=new Vector2(-365,-235);
+        run.helpText.rectTransform.anchoredPosition=new Vector2(-365,-455);
+        run.helpText.rectTransform.sizeDelta=new Vector2(730,370);
+        run.systemText.fontSize=25;run.systemText.rectTransform.sizeDelta=new Vector2(690,100);
+        run.systemText.rectTransform.anchoredPosition=new Vector2(-450,78);
+        run.attitudeText.fontSize=24;run.attitudeText.rectTransform.sizeDelta=new Vector2(750,60);
+        run.attitudeText.rectTransform.anchoredPosition=new Vector2(-450,-30);
+    }
     static Transform Pivot(Transform car,Transform model,string name,int level)
     {
         Transform source=null;

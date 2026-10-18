@@ -6,7 +6,7 @@ public class RoadsterAction : UdonSharpBehaviour
 {
     public RoadsterVehicle vehicle;
     public RoadsterRun run;
-    public int action; // 0 reset, 1 time attack, 2 exit, 3 sensitivity, 4 help, 5 board, 6 Auto/Manual, 7 landing assist
+    public int action; // 0 reset, 1 time attack, 2 exit, 3 feel, 4 help, 5 board, 6 flight, 7 landing, 8 view down, 9 up, 10 default
     public Transform visualCap;
     public float pressTravel = 8f; // Canvas units, .00272 m at the generated panel scale
     private Vector3 restPosition;
@@ -26,5 +26,8 @@ public class RoadsterAction : UdonSharpBehaviour
         else if (action==3) vehicle.CycleSensitivity();
         else if (action==6) vehicle.ToggleFlightMode();
         else if (action==7) vehicle.ToggleLandingAssist();
+        else if (action==8) vehicle.ViewDown();
+        else if (action==9) vehicle.ViewUp();
+        else if (action==10) vehicle.ViewReset();
     }
 }

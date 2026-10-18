@@ -22,6 +22,10 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public Transform cockpitEye;
     public float seatBaseHeight = .30f;
     [UdonSynced] private float seatHeightOffset;
+    private float viewHeightOffset; // Local preference, independent of avatar calibration.
+    public float viewHeightStep = .02f;
+    public float minViewHeightOffset = -.12f;
+    public float maxViewHeightOffset = .04f;
     public int fleetNumber = 1;
     public GameObject[] cockpitPanels;
     private float nextParkedVisual;
@@ -92,6 +96,11 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public float springStrength = 42f;
     public float springDamping = 7f;
     public float rideDistance = 0.6f;
+    public float fanDownforceG = 2f;
+    public float fanContactExtension = .22f;
+    [HideInInspector] public float fanAcceleration;
+    [HideInInspector] public Vector3 fanForceDirection;
+    private float fanReleaseUntil;
     public float syncInterval = 0.12f;
     public float flightCeiling = 100f;
     public Vector3 flightBoundsCenter;
@@ -185,8 +194,22 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if(!IsLocalDriver() || !Utilities.IsValid(cockpitEye) || body.velocity.magnitude>1f)return;
         // One adjustment at boarding, never follow subsequent HMD head movement.
         Vector3 head=transform.InverseTransformPoint(Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position);
-        seatHeightOffset=Mathf.Clamp(seatHeightOffset+cockpitEye.localPosition.y-head.y,-.85f,.35f);
+        seatHeightOffset=Mathf.Clamp(seatHeightOffset+cockpitEye.localPosition.y+viewHeightOffset-head.y,-.85f,.45f);
         ApplySeatHeight();RequestSerialization();
+    }
+    public void ViewUp() { AdjustViewHeight(viewHeightStep); }
+    public void ViewDown() { AdjustViewHeight(-viewHeightStep); }
+    public void ViewReset() { AdjustViewHeight(-viewHeightOffset); }
+    public float GetViewHeightOffset() { return viewHeightOffset; }
+    private void AdjustViewHeight(float change)
+    {
+        if(!IsLocalDriver()) { DriverOnlyFeedback(); return; }
+        float target=Mathf.Clamp(viewHeightOffset+change,minViewHeightOffset,maxViewHeightOffset);
+        float adjustedSeat=Mathf.Clamp(seatHeightOffset+target-viewHeightOffset,-.85f,.45f);
+        viewHeightOffset+=adjustedSeat-seatHeightOffset;
+        seatHeightOffset=adjustedSeat;
+        ApplySeatHeight();RequestSerialization();
+        SetFeedback("VIEW HEIGHT / "+Mathf.RoundToInt(viewHeightOffset*100f)+" cm / PGUP PGDN / HOME RESET");
     }
     private void ApplySeatHeight()
     {
@@ -241,6 +264,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (Utilities.IsValid(run)) run.CancelRun();
         ClearInput(); recoverArmedUntil = 0;
         stuntJumpActive=false; jumpPulseUntil=0; previousJumpHeld=jumpHeld;
+        fanAcceleration=0; fanForceDirection=Vector3.zero; fanReleaseUntil=0;
         body.velocity = Vector3.zero; body.angularVelocity = Vector3.zero;
         body.position = spawn.position; body.rotation = spawn.rotation;
         surfaceUp = Vector3.up; flightAllowed = false; motionMode = driverId >= 0 ? 1 : 0;
@@ -441,6 +465,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public void ToggleControlHelp() { showControlHelp=!showControlHelp; }
     public float GetDisplaySteering() { return Networking.IsOwner(gameObject) ? steering : ((netControl & 255)-127)/127f; }
     public float GetDisplayThrottle() { return Networking.IsOwner(gameObject) ? throttle : (((netControl>>8) & 255)-127)/127f; }
+    public float GetFanAcceleration() { return Networking.IsOwner(gameObject) ? fanAcceleration : (hasSnapshot && Time.time-snapshotTime<.6f ? ((netControl>>16)&255)/255f*19.62f : 0f); }
     public Vector3 GetLandingTelemetry() { return Networking.IsOwner(gameObject) ? new Vector3(groundClearance,closingSpeed,landingAcceleration) : netLandingTelemetry; }
     public bool HasFlightPermission() { return flightAllowed; }
     public string GetInputName()
@@ -497,6 +522,9 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (IsLocalDriver() && Input.GetKeyDown(KeyCode.H)) ToggleControlHelp();
         if (IsLocalDriver() && Input.GetKeyDown(KeyCode.F)) ToggleFlightMode();
         if (IsLocalDriver() && Input.GetKeyDown(KeyCode.L)) ToggleLandingAssist();
+        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.PageUp)) ViewUp();
+        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.PageDown)) ViewDown();
+        if (IsLocalDriver() && Input.GetKeyDown(KeyCode.Home)) ViewReset();
         AnimateCockpit();
         UpdateThrusterVisuals();
         float speed = Networking.IsOwner(gameObject) ? body.velocity.magnitude : netVelocity.magnitude;
@@ -522,7 +550,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         previousJumpHeld=jumpHeld;
         for (int i = 0; i < 7; i++) thrusterDemand[i] = 0;
         attitudeCommand = Vector3.zero; landingAcceleration = 0;
-        appliedLift=0;
+        appliedLift=0; fanAcceleration=0; fanForceDirection=Vector3.zero;
         ProbeLandingSurface();
         if (body.position.y < -20f || body.position.magnitude > 1800f) { Recover(); return; }
         if (flightAllowed)
@@ -533,16 +561,22 @@ public class RoadsterVehicle : UdonSharpBehaviour
         }
         int hits = 0;
         Vector3 normalSum = Vector3.zero;
+        // Only bridge a small suspension gap while already following the surface.
+        // A deliberate launch releases suction and the extended contact probes.
+        if((jumpPressed && inputArmed && surfaceUp.y>.85f && throttle>=0f && (!vrInput || yokeHeld))
+            || (flightAllowed && liftInput>.01f)) fanReleaseUntil=Time.time+.35f;
+        float probeDistance=rideDistance+(wasGrounded && Time.time>=fanReleaseUntil ? fanContactExtension : 0f);
         for (int i = 0; i < suspensionPoints.Length; i++)
         {
             RaycastHit hit;
             Transform point = suspensionPoints[i];
-            if (Physics.Raycast(point.position, -transform.up, out hit, rideDistance, roadMask, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(point.position, -transform.up, out hit, probeDistance, roadMask, QueryTriggerInteraction.Ignore))
             {
                 hits++; normalSum += hit.normal;
-                float compression = 1f - hit.distance / rideDistance;
+                float compression = Mathf.Clamp01(1f - hit.distance / rideDistance);
                 float verticalSpeed = Vector3.Dot(body.GetPointVelocity(point.position), hit.normal);
-                body.AddForceAtPosition(hit.normal * (compression * springStrength - verticalSpeed * springDamping), point.position, ForceMode.Acceleration);
+                // Suspension supports the chassis; suction is separately capped at 2 G.
+                body.AddForceAtPosition(hit.normal * Mathf.Max(0f,compression * springStrength - verticalSpeed * springDamping), point.position, ForceMode.Acceleration);
             }
         }
         if (manualFlight && wasGrounded != (hits>=2))
@@ -564,7 +598,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
                 if (rebound > maxReboundSpeed) body.velocity -= n * (rebound - maxReboundSpeed);
             }
             airborneSince = Time.time;
-            surfaceUp = Vector3.Slerp(surfaceUp, normalSum.normalized, 8f * Time.fixedDeltaTime);
+            Vector3 contactNormal=normalSum.normalized;
+            surfaceUp = Vector3.Slerp(surfaceUp, contactNormal, 20f * Time.fixedDeltaTime);
             motionMode = Vector3.Dot(surfaceUp, Vector3.up) < 0.65f ? 2 : 1;
             Vector3 forward = Vector3.ProjectOnPlane(transform.forward, surfaceUp).normalized;
             float forwardSpeed = Vector3.Dot(body.velocity, forward);
@@ -572,11 +607,23 @@ public class RoadsterVehicle : UdonSharpBehaviour
             if (throttle < 0f && forwardSpeed > 1f) force = throttle * brakeAcceleration;
             if (vrInput && throttle<0f) force=-Mathf.Sign(forwardSpeed)*Mathf.Min(brakeAcceleration*-throttle,Mathf.Abs(forwardSpeed)/Time.fixedDeltaTime);
             body.AddForce(forward * force, ForceMode.Acceleration);
-            body.AddForce(-surfaceUp * (motionMode == 2 ? 23f : 9.81f), ForceMode.Acceleration);
-            Vector3 lateral = Vector3.Project(body.velocity, transform.right);
-            body.AddForce(-lateral * 6f, ForceMode.Acceleration);
+            Vector3 gravity=Vector3.down*9.81f;
+            body.AddForce(gravity,ForceMode.Acceleration);
+            float incline=Vector3.Angle(contactNormal,Vector3.up);
+            if(Time.time>=fanReleaseUntil)
+            {
+                fanAcceleration=Mathf.Clamp(fanDownforceG,0f,2f)*9.81f*Mathf.InverseLerp(8f,15f,incline);
+                fanForceDirection=-contactNormal;
+                body.AddForce(fanForceDirection*fanAcceleration,ForceMode.Acceleration);
+            }
+            Vector3 roadRight=Vector3.Cross(contactNormal,forward).normalized;
+            float lateralSpeed=Vector3.Dot(body.velocity,roadRight);
+            float normalLoad=Mathf.Max(0f,fanAcceleration-Vector3.Dot(gravity,contactNormal));
+            // Suction supplies tyre grip on walls as well as normal adhesion.
+            float grip=-lateralSpeed*10f-Vector3.Dot(gravity,roadRight);
+            body.AddForce(roadRight*Mathf.Clamp(grip,-normalLoad*1.5f,normalLoad*1.5f),ForceMode.Acceleration);
             float yaw = steering * Mathf.Clamp(forwardSpeed / 12f, -1f, 1f) * 1.2f;
-            body.AddTorque(Vector3.Cross(transform.up, surfaceUp) * 18f - body.angularVelocity * 4f + surfaceUp * yaw * 4f, ForceMode.Acceleration);
+            body.AddTorque(Vector3.Cross(transform.up, surfaceUp) * 36f - body.angularVelocity * 8f + surfaceUp * yaw * 8f, ForceMode.Acceleration);
             if (flightAllowed && !manualFlight && liftInput>.01f && body.position.y<flightCeiling)
             {
                 appliedLift=liftInput;
@@ -758,7 +805,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     {
         netPosition = body.position; netRotation = body.rotation; netVelocity = body.velocity;
         PackThrust();
-        netControl=Mathf.RoundToInt(Mathf.Clamp(steering,-1,1)*127+127) | (Mathf.RoundToInt(Mathf.Clamp(throttle,-1,1)*127+127)<<8);
+        netControl=Mathf.RoundToInt(Mathf.Clamp(steering,-1,1)*127+127) | (Mathf.RoundToInt(Mathf.Clamp(throttle,-1,1)*127+127)<<8) | (Mathf.RoundToInt(Mathf.Clamp01(fanAcceleration/19.62f)*255)<<16);
         netLandingTelemetry=new Vector3(groundClearance,closingSpeed,landingAcceleration);
         netPilotAxes=new Vector3(pitchInput,steering,rollInput);
         netInputState=(vrInput ? 1 : 0)|(inputArmed ? 2 : 0)|(yokeHeld ? 4 : 0);
@@ -770,7 +817,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) return;
         netPosition = body.position; netRotation = body.rotation; netVelocity = body.velocity;
         PackThrust();
-        netControl=Mathf.RoundToInt(Mathf.Clamp(steering,-1,1)*127+127) | (Mathf.RoundToInt(Mathf.Clamp(throttle,-1,1)*127+127)<<8);
+        netControl=Mathf.RoundToInt(Mathf.Clamp(steering,-1,1)*127+127) | (Mathf.RoundToInt(Mathf.Clamp(throttle,-1,1)*127+127)<<8) | (Mathf.RoundToInt(Mathf.Clamp01(fanAcceleration/19.62f)*255)<<16);
         netLandingTelemetry=new Vector3(groundClearance,closingSpeed,landingAcceleration);
         netPilotAxes=new Vector3(pitchInput,steering,rollInput);
         netInputState=(vrInput ? 1 : 0)|(inputArmed ? 2 : 0)|(yokeHeld ? 4 : 0);

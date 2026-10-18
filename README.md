@@ -10,7 +10,7 @@
 - Meshyの管制塔・格納庫・ターミナル3種類を12棟として配置。meshy-t2.5、2K PBR、FBX。実測6,146～7,677三角形／種類、承認済み45クレジットを使用しました。生成IDは `Art/Airport/Meshy/generation.json`。
 - 共通 `Prefabs/Asterion_Shared.prefab` を32台で使用し、共通車体・LOD・内装・音源を参照。番号付きアクセントのテクスチャ／マテリアルのみ各車で変更。旧コース上の車はアクティブシーンから撤去しました。
 - [指定されたTesla動画](https://www.youtube.com/watch?v=r5vsHHPVhJg)を参考に、オリジナル合成のEV音・走行風・ガス噴射・着地音を搭載。動画の音声ファイルは配布アセットに含めていません。スモークを増量し、各車最大2,560粒子、160m以遠では新規放出を抑制します。
-- 座席基準を0.53mから0.30mへ低下。乗車時に一度だけ実際の頭の高さから補正し、設計視点0.98mへ合わせます。その後のHMDの動きには追従補正しません。ルーフ内張りと両面ガラス、2cm近クリップの参照カメラを設定しました。
+- 乗車時に一度だけ実際の頭の高さから補正し、設計視点1.08mへ合わせます（初回空港版の0.98mから10cm上昇）。車内ボタンから上下調整でき、その後のHMDの動きには追従補正しません。ルーフ内張りと両面ガラス、2cm近クリップの参照カメラを設定しました。
 - START/FINISH等の文字を正向き・両面のUnity文字へ置換。文字用シェーダーで背面文字の透け重なりを修正しました。入口に日本語操作ガイド・コース図を配置しています。
 - オリジナルのエレクトロBGM3曲と、入口のローカルON/OFF・曲送り・音量操作盤を実装。音楽は各プレイヤー個別で、他人の設定を変更しません。
 
@@ -36,6 +36,18 @@ Manualは無入力で回転を減衰しますが、姿勢を自動で水平に�
 
 ![正バンク](docs/images/airport-bank-corrected.png)
 
+### 視点調整と斜面吸着ファン
+
+車内操作盤の **VIEW −／DEFAULT／VIEW ＋**、または **PageDown／Home／PageUp** で目線を変更します。1回2cm、車体ローカルY=0.96〜1.12m、標準1.08m。アバターごとの乗車補正と手動調整を分け、屋根を抜けない範囲に制限しています。操作盤はVRのInteractにも対応。走行中も調整できます。
+
+斜面では自動ファンが路面へ向けて最大 **2G（19.62m/s²）** を加え、実際の重力と別に計算します。8〜15度で立ち上がり、それ以上では最大出力。押し付け荷重に応じたタイヤの横グリップと姿勢追従で、垂直壁や逆さの路面でも接触を維持します。接地中だけ最大22cmのサスペンション隙間を補い、離陸要求時は解除、空中では吸着しません。車内にFANのG表示、共通のオリジナルファン音を追加。音は無人時・空中・遠距離では停止します。これはゲーム内の要求仕様としての2Gで、実車の内部機構を再現したものではありません。
+
+更新の再適用は `Drive Roadster → Update cockpit height and surface fans`、検証入口は `RoadsterSeatFanValidation.Begin()`。原音の生成は `SourceAssets/build_surface_fan_audio.py`。ClientSim **30/30項目成功**：[検証結果](docs/validation/airport-seat-fan.json)。車内ボタン、実際の着座頭部位置、58度バンク・90度壁・180度天井の一時検証路面、実コースの変化する傾斜、離陸・空中解除を確認しました。既存の操縦回帰試験22/22、Python静的・数理検査33/33も成功。実HMDと複数クライアントは未検証です。
+
+![高さ調整付きの車内](docs/images/airport-raised-cockpit.png)
+
+![視点の上下調整ボタン](docs/images/airport-view-controls.png)
+
 ### 地面テクスチャと軽量な草
 
 草地とアスファルトのタイルテクスチャをimage_genで生成し、`Assets/DriveRoadster/Art/Airport/Surfaces/` に保存。Unityでは最大1024px、圧縮・ミップマップ・異方性4を使用し、ワールド座標で貼り付けます。ミラー反復と回転した副サンプルで境界と反復を目立ちにくくしています。[生成プロンプトと設定](SourceAssets/airport-surface-generation.json)。
@@ -44,7 +56,7 @@ Manualは無入力で回転を減衰しますが、姿勢を自動で水平に�
 
 ![草地と軽量な草](docs/images/airport-ground-detail.png)
 
-**検証:** C#・UdonSharpコンパイル成功。ClientSimによる新機能27/27項目成功、メイン路面242地点のコライダー検査成功。実際のClientSim着座視点は車体基準Y=0.98m。結果は `docs/validation/airport-clientsim.json` と `airport-road-colliders.json`。実HMD、32人同時のネットワーク、連続した全周走行、VRChat Build & Test／アップロードは未実施です。
+**初回空港版の検証:** C#・UdonSharpコンパイル成功。ClientSimによる新機能27/27項目成功、メイン路面242地点のコライダー検査成功。当時のClientSim着座視点は車体基準Y=0.98m（現在は上記の1.08m）。結果は `docs/validation/airport-clientsim.json` と `airport-road-colliders.json`。実HMD、32人同時のネットワーク、連続した全周走行、VRChat Build & Test／アップロードは未実施です。
 
 ![32台のスポーン駐車場](docs/images/airport-fleet-detail.png)
 
@@ -194,7 +206,7 @@ Meta Touchの物理入力、OpenXRプロファイル、Udon公開イベントの
 |---|---|
 | `Assets/DriveRoadster/Scripts/RoadsterVehicle.cs` | 乗降、所有権、車両物理、入力、スナップショット同期 |
 | `Assets/DriveRoadster/Scripts/RoadsterRun.cs` | ゲート判定、タイマー、失格、参考記録、HUD |
-| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | 乗車と7種の車内 Interact、押下演出 |
+| `Assets/DriveRoadster/Scripts/RoadsterAction.cs` | 乗車と10種の車内 Interact、押下演出 |
 | `Assets/DriveRoadster/Editor/BuildRoadsterWorld.cs` | FBX と manifest からシーン・座席・HUD・LOD を生成 |
 | `Assets/DriveRoadster/Editor/RoadsterCockpitSetup.cs` | 生計器、ボタン、乗車表示、可動部ピボットを生成 |
 | `Assets/DriveRoadster/Editor/RoadsterThrusterSetup.cs` | ノズル参照と3層のParticleSystem・白煙材質を生成 |
@@ -218,10 +230,10 @@ Meta Touchの物理入力、OpenXRプロファイル、Udon公開イベントの
 | 車体衝突形状 | 中心 `(0, .62, 0)`、寸法 `(1.8, .65, 4.3)` m の BoxCollider |
 | 最高速度 | 65 m/s ≈ 234 km/h。速度ベクトル全体を制限 |
 | 加速 / 制動 | 18 / 32 m/s² 相当の `ForceMode.Acceleration` |
-| サスペンション | 4 本の下向き Raycast、長さ .60 m、spring 42、damping 7 |
+| サスペンション | 4 本の下向き Raycast、長さ .60 m、接地継続時の探索延長 .22 m、spring 42、damping 7 |
 | 接地判定 | 2 本以上のヒット。法線を平滑化して車体姿勢を追従 |
 | 地上 / 壁 | 上向き法線と世界上方向の内積が .65 未満なら壁モード |
-| 押し付け | 地上 9.81、壁 23 m/s²。横滑り速度へ減衰係数 6 |
+| 押し付け | 世界下向き重力9.81 + 斜面ファン最大19.62 m/s²を路面方向へ。横グリップ上限は有効法線荷重の1.5倍 |
 | 飛行 | 許可区間で非接地が .12 秒超。入力による前進加速0～18 m/s²。Autoのみ速度28 m/sまで滑空揚力増加 |
 | 飛行上限 | 世界 Y=100 m 超で揚力 0。自動重力は無効、各モードで重力相当を明示適用 |
 | 復帰条件 | Y < −20 m または原点から 1,800 m 超。Backspace / RESETでも復帰 |

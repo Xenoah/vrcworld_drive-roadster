@@ -319,7 +319,7 @@ public static class RoadsterAirportUpgrade
     static void PrepareVehicle(RoadsterVehicle v)
     {
         v.station.stationEnterPlayerLocation.localPosition=new Vector3(-.395f,.30f,-.12f);
-        v.cockpitEye.localPosition=new Vector3(-.395f,.98f,-.08f);
+        v.cockpitEye.localPosition=new Vector3(-.395f,1.08f,-.08f);
         v.run.display=null;v.run.cockpitDisplay=null;
         v.cockpitPanels=new[]{"DriverInstruments","FlightSystems","DriverControls"}.Select(n=>v.transform.Find(n)).Where(t=>t!=null).Select(t=>t.gameObject).ToArray();
         foreach(var ps in v.GetComponentsInChildren<ParticleSystem>(true))Object.DestroyImmediate(ps.gameObject);
@@ -333,6 +333,7 @@ public static class RoadsterAirportUpgrade
         var audio=v.GetComponent<RoadsterAudio>();if(audio==null)audio=v.gameObject.AddUdonSharpComponent<RoadsterAudio>();audio.vehicle=v;
         audio.motor=Sound(v.transform,"EV Motor","EV_Motor_Loop",true,1.7f,85);audio.rolling=Sound(v.transform,"Road and wind","Tyre_Wind_Loop",true,1.5f,70);
         audio.gas=Sound(v.transform,"Cold gas thrust","Cold_Gas_Loop",true,3,110);audio.impact=Sound(v.transform,"Touchdown","Touchdown",false,2,70);audio.impact.volume=.4f;
+        RoadsterSeatFanUpgrade.Configure(v);
         var group=v.GetComponent<LODGroup>();var lods=group.GetLODs();lods[0].screenRelativeTransitionHeight=.28f;lods[1].screenRelativeTransitionHeight=.09f;lods[2].screenRelativeTransitionHeight=.009f;group.SetLODs(lods);
         if(v.transform.Find("FleetBadge_Hood")==null)
         {
