@@ -1,0 +1,159 @@
+{
+    "utc": "2026-10-22T14:31:32.8530674Z",
+    "unity": "2022.3.22f1",
+    "sdk": "3.10.5",
+    "environment": "Isolated Unity ClientSim project; actual Udon VM and PhysX; synthetic VR identity, hand pose and SDK input events; no physical HMD or multiplayer",
+    "checks": [
+        {
+            "name": "Held boarding trigger cannot accelerate",
+            "passed": true,
+            "detail": "seated with Use and Grab held"
+        },
+        {
+            "name": "Holding optional grip does not block drive arming",
+            "passed": true,
+            "detail": "right grip held outside yoke radius; trigger released"
+        },
+        {
+            "name": "Right trigger accelerates without acquiring yoke",
+            "passed": true,
+            "detail": "throttle=1"
+        },
+        {
+            "name": "Ungrasped trigger moves actual Rigidbody",
+            "passed": true,
+            "detail": "distance=2.527407, velocity=9.399996"
+        },
+        {
+            "name": "Right trigger release clears propulsion immediately",
+            "passed": true,
+            "detail": "throttle=0"
+        },
+        {
+            "name": "Left index independently brakes without yoke",
+            "passed": true,
+            "detail": "throttle=-1"
+        },
+        {
+            "name": "Simultaneous index buttons prioritize brake",
+            "passed": true,
+            "detail": "throttle=-1"
+        },
+        {
+            "name": "Left release preserves held right acceleration",
+            "passed": true,
+            "detail": "throttle=1"
+        },
+        {
+            "name": "Left stick steers without acquiring yoke",
+            "passed": true,
+            "detail": "steering=0.85"
+        },
+        {
+            "name": "Left stick Y still cannot accelerate",
+            "passed": true,
+            "detail": "MoveVertical=1"
+        },
+        {
+            "name": "Nearby right grip acquires attitude yoke",
+            "passed": true,
+            "detail": "right-hand pose at anchor"
+        },
+        {
+            "name": "Right trigger also accelerates while gripping yoke",
+            "passed": true,
+            "detail": "throttle=1"
+        },
+        {
+            "name": "Yoke release cuts held trigger until release",
+            "passed": true,
+            "detail": "right Use still held for 0.35 s"
+        },
+        {
+            "name": "Fresh trigger press restores drive without regripping",
+            "passed": true,
+            "detail": "throttle=1"
+        },
+        {
+            "name": "Leaving yoke radius cuts held trigger",
+            "passed": true,
+            "detail": "hand moved 2 m; right Use held"
+        },
+        {
+            "name": "Panel action clears and blocks held acceleration",
+            "passed": true,
+            "detail": "Use then panel Interact"
+        },
+        {
+            "name": "Panel input re-arms after trigger release",
+            "passed": true,
+            "detail": "released for 0.35 s"
+        },
+        {
+            "name": "Panel-before-Use ordering remains disarmed",
+            "passed": true,
+            "detail": "panel Interact then Use"
+        },
+        {
+            "name": "Grip outside reach cannot become acceleration",
+            "passed": true,
+            "detail": "grip is not an index trigger"
+        },
+        {
+            "name": "Left grip is not a brake",
+            "passed": true,
+            "detail": "left Grab event"
+        },
+        {
+            "name": "Manual air thrust works without yoke",
+            "passed": true,
+            "detail": "throttle=1, forward velocity=7.589535"
+        },
+        {
+            "name": "Manual yoke pitch and roll still work",
+            "passed": true,
+            "detail": "pitch=0.4360391, roll=0.574026"
+        },
+        {
+            "name": "Gripped VR Jump retains held lift",
+            "passed": true,
+            "detail": "lift=1"
+        },
+        {
+            "name": "Yoke release still cancels held lift",
+            "passed": true,
+            "detail": "Jump remains held"
+        },
+        {
+            "name": "Suspension immediately clears acceleration",
+            "passed": true,
+            "detail": "ClientSim suspend state"
+        },
+        {
+            "name": "Resume cannot reuse held trigger",
+            "passed": true,
+            "detail": "Use still held"
+        },
+        {
+            "name": "Ownership callback clears held acceleration",
+            "passed": true,
+            "detail": "single-client callback, not multiplayer transfer"
+        },
+        {
+            "name": "Desktop ground throttle regression",
+            "passed": true,
+            "detail": "synthetic MoveVertical; throttle=1"
+        },
+        {
+            "name": "Explicit exit releases driver",
+            "passed": true,
+            "detail": "ExitVehicle -> station callback"
+        },
+        {
+            "name": "No Udon runtime errors",
+            "passed": true,
+            "detail": ""
+        }
+    ],
+    "errors": []
+}

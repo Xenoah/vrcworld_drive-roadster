@@ -610,7 +610,7 @@ public static class RoadsterValidation
                 case 46:
                     Check("VR input method selected by SDK hook",V<bool>(vehicle,"vrInput") && V<string>(vehicle,"inputMethodName")=="SteamVR2","synthetic ClientSim VR identity; no HMD");
                     SendMove(1,0);Button(UdonManager.UDON_INPUT_USE,true);Event(vehicle,"ProcessPilotInput");
-                    Check("Unheld yoke blocks right trigger and stick Y",V<float>(vehicle,"throttle")==0f && !V<bool>(vehicle,"yokeHeld"),"no throttle from left stick Y or panel trigger");
+                    Check("Unheld yoke permits right trigger drive",V<float>(vehicle,"throttle")>0f && !V<bool>(vehicle,"yokeHeld"),"right Use accelerates independently of the attitude yoke");
                     Neutral();Button(UdonManager.UDON_INPUT_GRAB,true,HandType.LEFT);Event(vehicle,"ProcessPilotInput");
                     Check("Left grip is neither yoke nor index brake",!V<bool>(vehicle,"yokeHeld") && !V<bool>(vehicle,"leftUseHeld") && V<float>(vehicle,"throttle")==0f,"InputGrab LEFT is separate from InputUse LEFT");
                     Button(UdonManager.UDON_INPUT_GRAB,false,HandType.LEFT);

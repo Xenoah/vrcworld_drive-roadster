@@ -52,7 +52,7 @@ public class RoadsterVehicle : UdonSharpBehaviour
     private float moveVertical, moveHorizontal, desktopRoll;
     private bool jumpHeld, rightUseHeld, leftUseHeld, rightGrabHeld, desktopBrake, desktopThrust;
     private bool manualAxesAwaitNeutral;
-    private bool inputArmed, vrInput, yokeHeld;
+    private bool inputArmed, vrInput, yokeHeld, rightUseNeedsRelease;
     private float lastControlFrame;
     private float neutralSince, pitchInput, rollInput, rawPitch, rawRoll, liftInput;
     private float appliedLift;
@@ -300,7 +300,11 @@ public class RoadsterVehicle : UdonSharpBehaviour
     public override void InputJump(bool value, UdonInputEventArgs args) { jumpHeld = value; }
     public override void InputUse(bool value, UdonInputEventArgs args)
     {
-        if (args.handType == HandType.RIGHT) rightUseHeld = value;
+        if (args.handType == HandType.RIGHT)
+        {
+            rightUseHeld = value;
+            if (!value) rightUseNeedsRelease = false;
+        }
         else leftUseHeld = value;
     }
     public override void InputGrab(bool value, UdonInputEventArgs args)
@@ -337,14 +341,22 @@ public class RoadsterVehicle : UdonSharpBehaviour
         rawThrottle=0; rawSteering=0; throttle=0; steering=0;
         rawPitch=0; rawRoll=0; pitchInput=0; rollInput=0; liftInput=0; appliedLift=0;
         inputArmed=false; yokeHeld=false; neutralSince=Time.time;
+        rightUseNeedsRelease=rightUseHeld;
         manualAxesAwaitNeutral=false;
         // Preserve observed held inputs: neutral must be observed before rearming.
     }
     private void ReleaseYoke()
     {
         if (!vrInput) return;
+        bool wasHoldingYoke=yokeHeld;
         yokeHeld=false; rawPitch=0; rawRoll=0; pitchInput=0; rollInput=0;
-        rawThrottle=0; throttle=0; liftInput=0;
+        if (wasHoldingYoke)
+        {
+            // Dropping an acquired yoke is still a stop gesture. Require a fresh
+            // index press so independent trigger driving cannot resume held thrust.
+            rightUseNeedsRelease=rightUseHeld;
+            rawThrottle=0; throttle=0; liftInput=0;
+        }
     }
     public void SuspendForPanel()
     {
@@ -375,7 +387,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (!IsLocalDriver()) return;
         if (Networking.LocalPlayer.isSuspended) { ClearInput(); return; }
         bool neutral = Mathf.Abs(moveHorizontal)<=inputDeadzone && (vrInput || Mathf.Abs(moveVertical)<=inputDeadzone)
-            && !jumpHeld && !rightUseHeld && !leftUseHeld && !rightGrabHeld && !desktopBrake && !desktopThrust && Mathf.Abs(desktopRoll)<.01f;
+            && !jumpHeld && !rightUseHeld && !leftUseHeld
+            && (vrInput || (!rightGrabHeld && !desktopBrake && !desktopThrust && Mathf.Abs(desktopRoll)<.01f));
         if (!inputArmed)
         {
             if (!neutral) neutralSince=Time.time;
@@ -408,8 +421,9 @@ public class RoadsterVehicle : UdonSharpBehaviour
                 }
             }
             brakeRequested=leftUseHeld;
-            rawThrottle=brakeRequested ? -1f : yokeHeld && rightUseHeld ? 1f : 0f;
-            if (!yokeHeld) rawSteering=0;
+            // Trigger drive and left-stick steering must work without reaching a
+            // virtual hand anchor. The yoke is only needed for tracked attitude/lift.
+            rawThrottle=brakeRequested ? -1f : rightUseHeld && !rightUseNeedsRelease ? 1f : 0f;
         }
         else if (manualAir)
         {
@@ -452,7 +466,8 @@ public class RoadsterVehicle : UdonSharpBehaviour
         if (pendingSeat) return "REQUESTING CONTROL";
         if (!IsLocalDriver()) return driverId>=0 ? "OCCUPIED / DRIVER " + driverId : "AVAILABLE / INTERACT AT DRIVER DOOR";
         if (!inputArmed) return "RELEASE INPUTS TO ARM / X OR EXIT";
-        if (vrInput && !yokeHeld) return "GRIP RIGHT YOKE TO ACCELERATE / X OR EXIT";
+        if (vrInput && rightUseNeedsRelease) return "RELEASE RIGHT TRIGGER / PRESS AGAIN TO DRIVE";
+        if (vrInput && !yokeHeld) return "VR READY / RIGHT TRIGGER TO DRIVE / X OR EXIT";
         return "CONTROL READY / X OR EXIT TO PADDOCK";
     }
     public void RequestRecover()
